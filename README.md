@@ -1,72 +1,84 @@
-# Filipino Morphology-Aware Language Modeling
+# Filipino Morphology LLM
 
-A unified framework for training and evaluating morphologically-aware tokenization methods for Filipino and other morphologically-rich languages.
+A framework for morphological tokenization and evaluation in Filipino and other morphologically rich languages.
 
-## Overview
+## Motivation
 
-This repository combines:
-1. **Patok**: An affix-aware stochastic tokenization method that extends StochasTok
-2. **PACUTE**: Philippine Annotated Corpus for Understanding Tagalog Entities - a benchmark for evaluating subword understanding in Filipino
+Standard subword tokenizers (BPE, WordPiece) are trained on high-resource languages and often misalign with morphological boundaries in morphologically rich languages. For Filipino, a language with extensive affixation (prefixes, infixes, suffixes, circumfixes), this misalignment limits model performance on tasks requiring morphological understanding.
 
-## Key Features
+Recent work on English (CUTE, StochasTok) shows that subword-level understanding can be improved through tokenization strategies. However, these methods do not address the specific challenges of morphologically rich languages where affix boundaries are critical for semantic interpretation.
 
-- **Morphologically-Aware Tokenization**: Patok processor that preferentially forms Filipino affixes during tokenization
-- **Hierarchical Evaluation Framework**: Multi-level tasks that diagnose specific morphological capabilities
-- **Information-Theoretic Analysis**: Quantify morphological information in tokenizations
-- **Multi-Tokenizer Support**: Works with GPT-2, Llama, Gemma, and other BPE tokenizers
-- **End-to-End Pipeline**: From data preprocessing through training to evaluation
+This repository addresses three research questions:
+
+1. Can stochastic tokenization be extended with morphological constraints to better capture affix structure?
+2. Do improvements in morphological tokenization transfer to performance on linguistic understanding tasks?
+3. Can morphological alignment be quantified using information-theoretic metrics?
+
+## Components
+
+**Patok**: Extends StochasTok with affix-specific processing. During tokenization, applies expand-contract cycles that preferentially form Filipino affixes based on a linguistic affix inventory.
+
+**PACUTE** (Philippine Annotated Corpus for Understanding Tagalog Entities): Evaluation benchmark with 1,040 items testing character manipulation, morpheme decomposition, morpheme manipulation, and morpheme composition. Adapts CUTE methodology to Filipino.
+
+**Hierarchical Tasks**: Six-level diagnostic framework that isolates capability failures (e.g., distinguishing between inability to recognize morphemes vs inability to manipulate them).
+
+**Morphological Metrics**: Quantitative measures including MorphScore (boundary alignment), affix preservation rates, and mutual information between morphemes and tokens.
 
 ## Repository Structure
 
 ```
 filipino-morphology-llm/
 ├── src/
-│   ├── tokenization/          # Patok & StochasTok processors
-│   ├── models/                # Transformer architecture
-│   ├── training/              # Training infrastructure (DDP support)
-│   ├── evaluation/            # PACUTE benchmark + metrics
-│   ├── data_processing/       # Dataset preprocessing pipelines
-│   └── analysis/              # Information-theoretic analysis tools
+│   ├── tokenization/       # Patok, StochasTok, affix decomposition
+│   ├── models/             # Transformer architecture
+│   ├── training/           # Training infrastructure
+│   ├── evaluation/         # PACUTE benchmark, hierarchical tasks
+│   ├── data_processing/    # Dataset preprocessing
+│   └── analysis/           # Morphological and information-theoretic metrics
 ├── data/
-│   ├── affixes/               # Filipino affixes & decomposition rules
-│   ├── benchmarks/            # PACUTE evaluation tasks (1,040 items)
-│   ├── corpora/               # Training data
-│   └── vocabularies/          # Tokenizer vocabulary analyses
-├── configs/                   # Hydra configuration files
-├── experiments/               # Training & evaluation scripts
-├── notebooks/                 # Analysis notebooks
-├── tests/                     # Unit tests
-└── scripts/                   # Utility scripts
+│   ├── affixes/            # 93 Filipino affixes
+│   ├── benchmarks/         # 1,040 PACUTE evaluation items
+│   ├── corpora/            # Word frequencies, syllabifications
+│   └── vocabularies/       # Tokenizer coverage analyses
+├── configs/                # Training configurations
+├── experiments/            # Training and evaluation scripts
+├── notebooks/              # Analysis notebooks
+└── scripts/                # Utility scripts
 ```
 
 ## Installation
 
 ```bash
-# Clone repository
-git clone [url]
+git clone https://github.com/DavidDemitriAfrica/filipino-morphology-llm.git
 cd filipino-morphology-llm
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Install package in development mode
 pip install -e .
 ```
 
-## Quick Start
+## Usage
 
-### 1. Tokenize Dataset with Patok
+### Tokenization
+
+Apply Patok to a corpus:
 
 ```bash
 python src/data_processing/patok_expand_contract_dataset.py \
-    --input data/corpora/your_corpus \
+    --input data/corpora/source \
     --output data/processed/patok_tokenized \
     --expand_prop 0.3 \
     --contract_prop 0.3 \
     --affix_preference 0.7
 ```
 
-### 2. Train Model
+Analyze affix coverage across tokenizers:
+
+```bash
+python scripts/analyze_affix_coverage.py \
+    --compare gpt2 cl100k_base \
+    --affixes-file data/affixes/filipino_affixes.txt
+```
+
+### Training
 
 ```bash
 python experiments/train.py \
@@ -74,148 +86,113 @@ python experiments/train.py \
     trainer.dataset.name=patok_tokenized
 ```
 
-### 3. Evaluate on PACUTE
+### Evaluation
+
+Run hierarchical evaluation:
 
 ```bash
 python experiments/eval.py \
     --checkpoint checkpoints/model.pt \
-    --benchmark pacute \
+    --benchmark pacute_hierarchical \
     --output results/
 ```
 
-## Patok: Affix-Aware Tokenization
-
-Patok extends StochasTok with morphological awareness:
-
-1. **Expand Phase**: Stochastically split tokens (avoiding affix boundaries)
-2. **Contract Phase**: Merge adjacent tokens with preference for forming Filipino affixes
-3. **Affix Dictionary**: Uses 93 Filipino affixes with configurable preference weights
+Compute morphological metrics:
 
 ```python
-from src.tokenization import PatokProcessor
+from src.analysis import MorphologicalMetrics, MorphologicalAnnotation
 
-processor = PatokProcessor(
-    base_tokenizer="gpt2",
-    affixes_file="data/affixes/filipino_affixes.txt",
-    expand_prop=0.3,      # Probability of expanding a token
-    contract_prop=0.3,    # Probability of contracting adjacent tokens
-    affix_preference=0.7, # Preference weight for affix-forming contractions
-    num_iterations=3      # Number of expand-contract cycles
-)
+annotations = [
+    MorphologicalAnnotation(
+        word="nagluto",
+        morphemes=["nag", "luto"],
+        morpheme_boundaries=[3],
+        affix_types=["prefix", "root"]
+    )
+]
 
-tokens = processor.process(text)
+metrics = MorphologicalMetrics(tokenizer)
+morph_score = metrics.compute_morph_score(annotations)
+preservation = metrics.compute_affix_preservation_score(annotations)
 ```
+
+## Patok Algorithm
+
+Patok processes token sequences through iterative expand-contract cycles:
+
+1. **Expand**: Randomly split tokens into sub-tokens (respecting vocabulary constraints)
+2. **Contract**: Merge adjacent tokens with preference for forming linguistic affixes
+3. **Repeat**: Apply multiple cycles (default: 3)
+
+Affix preference is controlled by a weight parameter (default: 0.7) that biases merging toward combinations that form entries in the Filipino affix inventory.
+
+For out-of-vocabulary affixes, uses a decomposition algorithm that finds optimal sub-token sequences based on morphological validity (CV structure, boundary alignment, morpheme frequency).
 
 ## PACUTE Benchmark
 
-### Hierarchical Task Structure
-
-PACUTE organizes tasks into levels that diagnose specific capabilities:
-
-- **Level 0: Character Recognition** - Basic character-level operations
-- **Level 1: Character Manipulation** - String operations without morphology
-- **Level 2: Morpheme Decomposition** - Identifying morphological boundaries
-- **Level 3: Morpheme Manipulation** - Transforming morphological units
-- **Level 4: Morpheme Composition** - Building words from morphemes
-- **Level 5: Complex Morphological Reasoning** - Multi-step linguistic operations
-
 ### Task Categories
 
-1. **Affixation** (280 items): Prefix, suffix, infix, circumfix operations
-2. **Composition** (280 items): Spelling, character counting, length analysis
-3. **Manipulation** (320 items): Insertion, deletion, substitution, permutation
-4. **Syllabification** (160 items): Stress classification, syllable counting
+1. **Composition** (280 items): Spelling, character counting, length comparisons
+2. **Manipulation** (320 items): Character insertion, deletion, substitution, permutation
+3. **Affixation** (280 items): Prefix, suffix, infix, circumfix operations
+4. **Syllabification** (160 items): Syllable counting, stress classification
 
-```python
-from src.evaluation import evaluate_pacute, generate_capability_profile
+### Hierarchical Levels
 
-# Evaluate model on all PACUTE tasks
-results = evaluate_pacute(model, tokenizer, benchmark_path="data/benchmarks/")
+- Level 0: Character recognition
+- Level 1: Character manipulation
+- Level 2: Morpheme decomposition
+- Level 3: Morpheme manipulation
+- Level 4: Morpheme composition
+- Level 5: Complex morphological reasoning
 
-# Generate hierarchical capability profile
-profile = generate_capability_profile(results)
-# Output: Performance at each level (0-5) for each task category
-```
+Tasks are structured compositionally such that failure at level N indicates expected failure at level N+1, enabling precise diagnosis of capability gaps.
 
-## Information-Theoretic Analysis
+## Metrics
 
-```python
-from src.analysis import (
-    morpheme_token_mutual_information,
-    morphological_perplexity,
-    affix_consistency_entropy,
-    compositionality_score
-)
+### Morphological Alignment
 
-# Measure morphological information in tokenization
-mi_score = morpheme_token_mutual_information(tokenizer, morpheme_annotations)
+**MorphScore**: Proportion of morpheme boundaries that align with token boundaries.
 
-# Compare perplexity on morphologically complex words
-perplexity = morphological_perplexity(model, word_list, complexity_scores)
+**Affix Preservation**: Frequency with which affixes appear as complete tokens rather than being split.
 
-# Measure affix tokenization consistency
-consistency = affix_consistency_entropy(tokenizer, affixed_words)
+**Boundary F1**: Precision and recall treating token boundaries as predictions of morpheme boundaries.
 
-# Test compositional understanding
-compositionality = compositionality_score(model, root_words, affixed_words)
-```
+**Fragmentation**: Average number of tokens per morpheme.
 
-## Experiments
+### Information Theoretic
 
-### Pretraining Comparison
+**Mutual Information I(M;T)**: Quantifies information about morphemes provided by tokenization. Higher values indicate stronger morphological alignment.
 
-```bash
-# Baseline (standard tokenization)
-python experiments/train.py --config-name pretraining \
-    trainer.dataset.name=openwebtext-tokenized
+**Conditional Entropy H(M|T)**: Uncertainty about morphemes given tokens. Lower values indicate more predictable morphological structure.
 
-# With StochasTok
-python experiments/train.py --config-name pretraining \
-    trainer.dataset.name=openwebtext-tokenized-stochastok0.1
+**Consistency Entropy**: Variability in how the same affix is tokenized across words. Lower values indicate more consistent treatment.
 
-# With Patok (ours)
-python experiments/train.py --config-name pretraining \
-    trainer.dataset.name=openwebtext-tokenized-patok0.3-0.3-0.7
-```
+## Data
 
-### Evaluation Pipeline
+**Filipino Affixes**: 93 affixes from linguistic references (Wiktionary, Tagalog grammar sources).
 
-```bash
-# Run full evaluation suite
-bash scripts/run_full_evaluation.sh \
-    --models baseline,stochastok,patok \
-    --benchmarks pacute,winogrande,hellaswag,arc
-```
+**Syllabifications**: 16,828 words with syllable boundaries and stress annotations.
 
-## Configuration
+**Word Frequencies**: 2M+ entries from Filipino corpus data.
 
-All experiments use Hydra for configuration. Key config files:
-
-- `configs/pretraining.yaml`: Pretraining hyperparameters
-- `configs/instruction_tuning.yaml`: Fine-tuning setup
-- `configs/tokenization/patok.yaml`: Patok parameters
-- `configs/evaluation/pacute.yaml`: PACUTE benchmark settings
-
-Override configs from command line:
-```bash
-python experiments/train.py \
-    model.n_layers=12 \
-    trainer.batch_size=128 \
-    tokenization.affix_preference=0.8
-```
+**UP Diksiyonaryo**: 67,691 dictionary entries used for validation.
 
 ## Citation
 
-If you use this code or PACUTE benchmark, please cite:
-
 ```bibtex
-@inproceedings{filipino-morphology-llm-2026,
-  title={Morphologically-Aware Tokenization for Low-Resource Languages},
-  author={[Authors]},
-  booktitle={Proceedings of [Conference]},
-  year={2026}
+@misc{filipino-morphology-llm-2025,
+  author = {[Authors]},
+  title = {Morphological Tokenization for Low-Resource Languages},
+  year = {2025},
+  url = {https://github.com/DavidDemitriAfrica/filipino-morphology-llm}
 }
 ```
+
+## References
+
+- CUTE: Edman et al. (2024). "A Character-level Understanding Task for English"
+- StochasTok: Sims et al. (2025). "Stochastic Tokenization Improves Subword Understanding"
 
 ## License
 
@@ -223,10 +200,4 @@ If you use this code or PACUTE benchmark, please cite:
 
 ## Acknowledgments
 
-- Based on [StochasTok](https://arxiv.org/abs/2506.01687) by Sims et al.
-- Inspired by [CUTE](https://aclanthology.org/2024.emnlp-main.177/) by Edman et al.
-- Filipino linguistic resources from UP Diksiyonaryo
-
-## Contact
-
-[Contact information]
+Built on StochasTok (Sims et al.) and inspired by CUTE (Edman et al.). Filipino linguistic resources from UP Diksiyonaryo.
