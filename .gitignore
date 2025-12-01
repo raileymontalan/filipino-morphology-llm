@@ -77,3 +77,6 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+
+#
+data/corpora/seapile-v2.jsonl
