@@ -26,9 +26,14 @@ Unified framework for morphological tokenization and evaluation in Filipino. Mer
 - **Word frequencies**: 118,801 entries for frequency-aware sampling
 
 ### Tokenization
-- **Patok**: Affix-aware expand-contract tokenization (from StochasTok)
-- **StochasTok**: Stochastic token expansion (from StochasTok)
-- **Affix decomposition**: Algorithm for handling out-of-vocabulary affixes
+- **Patok**: Morphology-aware tokenization with Aho-Corasick affix detection
+  - Contract-expand with 95% affix preservation
+  - Re-expands by splitting off known affixes ("maganda" → "ma" + "ganda")
+  - Handles reduplication ("gaganda" → "ga" + "ganda")
+  - Uses 92 Filipino affixes (data/affixes/filipino_affixes.txt)
+  - `src/tokenization/patok_morphology.py`
+- **StochasTok**: Stochastic token expansion baseline
+- **Affix decomposition**: Handles out-of-vocabulary affixes
 
 ### Analysis Tools
 - **MorphScore**: Measures alignment between token and morpheme boundaries
@@ -109,6 +114,19 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Morphology-Aware Tokenization
+
+```python
+import tiktoken
+from src.tokenization.patok_morphology import MorphologyAwarePatokProcessor
+
+tokenizer = tiktoken.get_encoding("gpt2")
+patok = MorphologyAwarePatokProcessor(tokenizer)
+
+text = "Nagkukumahog na pinadalhan ng magagandang parlorista"
+token_ids = patok.process(text)
+```
+
 ### Analyze Tokenizer
 
 Check affix coverage:
@@ -138,13 +156,10 @@ python scripts/compare_tokenizers.py
 
 ## What Still Needs Doing
 
-This repository provides the evaluation framework and baseline measurements. To complete the research:
-
-1. **Train Patok model**: Apply Patok tokenization during training
+1. **Train with Patok**: Apply morphology-aware tokenization during pre-training
 2. **Evaluate on tasks**: Test on 2,236 evaluation items
-3. **Measure downstream performance**: Show improved tokenization → better morphological understanding
-
-The Patok code exists (from StochasTok) but has not been trained or evaluated on Filipino.
+3. **Measure downstream**: Compare Patok vs baseline on hierarchical tasks
+4. **Get Filipino corpus**: Need training data for pre-training
 
 ## Key Files
 
@@ -184,7 +199,7 @@ See [ORIGINAL_SOURCES.md](ORIGINAL_SOURCES.md) for detailed attribution.
 
 ## New Contributions
 
-- Unified monorepo structure
+- Morphology-aware Patok with Aho-Corasick affix detection
 - 472 morpheme-annotated Filipino words
 - 1,196 hierarchical diagnostic tasks (6 levels)
 - Baseline BPE analysis (MorphScore = 0.235)
