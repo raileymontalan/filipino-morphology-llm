@@ -80,3 +80,24 @@ temp/
 
 # Pre-training corpora
 data/corpora/*.jsonl
+
+# Environment variables and secrets
+.env
+*.env
+!.env.example
+secrets/
+*.key
+*.token
+
+# Container files (large, user-specific)
+*.sif
+*.simg
+container_cache/
+
+# Enroot/Apptainer/Singularity cache
+.enroot/
+.apptainer/
+.singularity/
+
+# NVIDIA NeMo experiment outputs
+nemo_experiments/
