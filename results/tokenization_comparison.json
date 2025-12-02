@@ -8,7 +8,7 @@
       "f1": 0.1653333333333333
     }
   },
-  "patok": {
+  "oracle": {
     "morph_score": 0.9901960784313726,
     "fragmentation": 1.6584158415841583,
     "boundary_f1": {
@@ -17,9 +17,23 @@
       "f1": 0.6433333333333333
     }
   },
-  "improvement": {
+  "patok": {
+    "morph_score": 0.6568627450980392,
+    "fragmentation": 1.9059405940594059,
+    "boundary_f1": {
+      "precision": 0.2735,
+      "recall": 0.665,
+      "f1": 0.3646666666666667
+    }
+  },
+  "oracle_vs_baseline": {
     "morph_score": 0.7549019607843137,
     "fragmentation": 0.08415841584158401,
     "boundary_f1": 0.478
+  },
+  "patok_vs_baseline": {
+    "morph_score": 0.4215686274509804,
+    "fragmentation": 0.33168316831683153,
+    "boundary_f1": 0.1993333333333334
   }
 }

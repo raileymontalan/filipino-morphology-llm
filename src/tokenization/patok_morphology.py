@@ -197,6 +197,10 @@ class MorphologyAwarePatokProcessor:
         # Choose number of tokens to contract
         n = random.choices(num_tokens, weights=contract_prob)[0]
 
+        # If token_ids is too short, return the entire string
+        if len(token_ids) < n:
+            return self.tokenizer.decode(token_ids), 0, len(token_ids)
+
         # Keep trying until we find a valid contraction
         max_attempts = 100
         for _ in range(max_attempts):

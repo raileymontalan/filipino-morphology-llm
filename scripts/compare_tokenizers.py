@@ -18,6 +18,7 @@ sys.path.insert(0, '.')
 import tiktoken
 from typing import List, Dict
 from collections import defaultdict
+from src.tokenization.patok_morphology import MorphologyAwarePatokProcessor
 
 
 def load_annotations(file_path: str, limit: int = 100) -> List[Dict]:
@@ -97,14 +98,15 @@ def compute_boundary_f1(token_boundaries: set, morpheme_boundaries: set) -> Dict
     }
 
 
-def analyze_tokenizer(annotations: List[Dict], tokenizer, mode: str = "baseline") -> Dict:
+def analyze_tokenizer(annotations: List[Dict], tokenizer, mode: str = "baseline", patok_processor=None) -> Dict:
     """
     Analyze tokenization for all annotated words.
 
     Args:
         annotations: List of word annotations
         tokenizer: The tokenizer to use
-        mode: "baseline" (standard BPE) or "patok" (morphologically-aware)
+        mode: "baseline", "patok_oracle", or "patok_real"
+        patok_processor: MorphologyAwarePatokProcessor instance (for patok_real mode)
     """
     results = []
     total_aligned = 0
@@ -127,8 +129,15 @@ def analyze_tokenizer(annotations: List[Dict], tokenizer, mode: str = "baseline"
         # Tokenize based on mode
         if mode == "baseline":
             tokens = tokenize_word(word, tokenizer)
-        else:  # patok
+        elif mode == "patok_oracle":
             tokens = tokenize_patok_style(word, sorted(morpheme_boundaries), tokenizer)
+        elif mode == "patok_real":
+            if patok_processor is None:
+                raise ValueError("patok_processor required for patok_real mode")
+            token_ids = patok_processor.process(word, disable_tqdm=True)
+            tokens = [tokenizer.decode([tid]) for tid in token_ids]
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
 
         token_boundaries = set(find_token_boundaries(word, tokens))
 
@@ -320,13 +329,32 @@ def main():
     print("Analyzing GPT-2 baseline...")
     gpt2_analysis = analyze_tokenizer(annotations, tokenizer, mode="baseline")
     print("  ✓ GPT-2 analysis complete")
+    print()
 
-    # Analyze Patok
-    print("Analyzing morphologically-aware tokenization (Patok-style)...")
-    patok_analysis = analyze_tokenizer(annotations, tokenizer, mode="patok")
+    # Analyze Oracle (split at known boundaries)
+    print("Analyzing Oracle tokenization (split at known boundaries)...")
+    oracle_analysis = analyze_tokenizer(annotations, tokenizer, mode="patok_oracle")
+    print("  ✓ Oracle analysis complete")
+    print()
+
+    # Initialize and analyze real Patok
+    print("Initializing Patok processor...")
+    patok_processor = MorphologyAwarePatokProcessor(tokenizer)
+    print("  ✓ Patok processor initialized")
+    print()
+
+    print("Analyzing real Patok (morphology-aware)...")
+    patok_analysis = analyze_tokenizer(annotations, tokenizer, mode="patok_real", patok_processor=patok_processor)
     print("  ✓ Patok analysis complete")
+    print()
 
     # Print results
+    print_comparison(gpt2_analysis, oracle_analysis)
+    print()
+    print("=" * 80)
+    print("REAL PATOK VS BASELINE")
+    print("=" * 80)
+    print()
     print_comparison(gpt2_analysis, patok_analysis)
     print_examples(gpt2_analysis, patok_analysis, n=15)
 
@@ -342,12 +370,22 @@ def main():
             'fragmentation': gpt2_analysis['fragmentation'],
             'boundary_f1': gpt2_analysis['boundary_f1'],
         },
+        'oracle': {
+            'morph_score': oracle_analysis['morph_score'],
+            'fragmentation': oracle_analysis['fragmentation'],
+            'boundary_f1': oracle_analysis['boundary_f1'],
+        },
         'patok': {
             'morph_score': patok_analysis['morph_score'],
             'fragmentation': patok_analysis['fragmentation'],
             'boundary_f1': patok_analysis['boundary_f1'],
         },
-        'improvement': {
+        'oracle_vs_baseline': {
+            'morph_score': oracle_analysis['morph_score'] - gpt2_analysis['morph_score'],
+            'fragmentation': oracle_analysis['fragmentation'] - gpt2_analysis['fragmentation'],
+            'boundary_f1': oracle_analysis['boundary_f1']['f1'] - gpt2_analysis['boundary_f1']['f1'],
+        },
+        'patok_vs_baseline': {
             'morph_score': patok_analysis['morph_score'] - gpt2_analysis['morph_score'],
             'fragmentation': patok_analysis['fragmentation'] - gpt2_analysis['fragmentation'],
             'boundary_f1': patok_analysis['boundary_f1']['f1'] - gpt2_analysis['boundary_f1']['f1'],
