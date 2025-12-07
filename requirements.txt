@@ -77,6 +77,9 @@ pytest>=7.4.0
 black>=23.9.0
 isort>=5.12.0
 
+# Information theory & analysis
+scipy>=1.11.0
+pyahocorasick
 # ============================================================================
 # Hydra for configuration management (compatible with container)
 # ============================================================================

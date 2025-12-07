@@ -1,0 +1,84 @@
+{
+  "evaluation_date": "2025-12-02",
+  "benchmark": "PACUTE",
+  "samples_evaluated": 100,
+  "total_tasks": 560,
+  "device": "cpu",
+  "method": "MCQ with log-probability scoring",
+
+  "models": {
+    "gpt2": {
+      "hf_model_name": "gpt2",
+      "model_type": "pt",
+      "parameters": "124M",
+      "pacute": {
+        "samples": 100,
+        "accuracy": 0.24,
+        "f1_score": 0.3871,
+        "precision": 1.0,
+        "recall": 0.24,
+        "path_confidence": 0.2475,
+        "normalized_accuracy": -0.0133
+      }
+    },
+    "cerebras-gpt-111m": {
+      "hf_model_name": "cerebras/Cerebras-GPT-111M",
+      "model_type": "pt",
+      "parameters": "111M",
+      "pacute": {
+        "samples": 100,
+        "accuracy": 0.22,
+        "f1_score": 0.3607,
+        "precision": 1.0,
+        "recall": 0.22,
+        "path_confidence": 0.2168,
+        "normalized_accuracy": -0.04
+      }
+    },
+    "cerebras-gpt-256m": {
+      "hf_model_name": "cerebras/Cerebras-GPT-256M",
+      "model_type": "pt",
+      "parameters": "256M",
+      "pacute": {
+        "samples": 100,
+        "accuracy": 0.25,
+        "f1_score": 0.4,
+        "precision": 1.0,
+        "recall": 0.25,
+        "path_confidence": 0.2604,
+        "normalized_accuracy": 0.0
+      }
+    },
+    "qwen-2.5-0.5b": {
+      "hf_model_name": "Qwen/Qwen2.5-0.5B",
+      "model_type": "pt",
+      "parameters": "500M",
+      "pacute": {
+        "status": "failed",
+        "error": "Out of memory (killed after 55/100 samples)",
+        "samples_completed": 55,
+        "exit_code": 137
+      }
+    }
+  },
+
+  "notes": [
+    "CUTE benchmark encountered division by zero error due to generative format incompatibility with MCQ scoring",
+    "All models performed at or slightly below random baseline (25% for 4-option MCQ)",
+    "Qwen-2.5-0.5B evaluation terminated due to memory constraints on CPU",
+    "Full 560-task evaluation recommended for comprehensive results",
+    "All successful models achieved 100% precision (high confidence when correct)"
+  ],
+
+  "benchmark_details": {
+    "total_tasks": 560,
+    "categories": {
+      "affixation": 140,
+      "composition": 180,
+      "manipulation": 160,
+      "syllabification": 80
+    },
+    "format": "Multiple choice questions with 4 options",
+    "focus": "Filipino morphological understanding"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "gpt2": {
+    "hf_model_name": "gpt2",
+    "model_type": "pt",
+    "benchmarks": {
+      "pacute": {
+        "accuracy": 0.30000001192092896,
+        "f1_score": 0.461538461495858,
+        "precision": 0.9999999999666667,
+        "recall": 0.299999999997,
+        "path_confidence": 0.2556714415550232,
+        "normalized_accuracy": 0.0666666825612386,
+        "num_options": 4,
+        "num_samples": 10,
+        "format": "mcq"
+      },
+      "cute": {
+        "num_samples": 10,
+        "exact_match_accuracy": 0.0,
+        "contains_match_accuracy": 0.2,
+        "prefix_match_accuracy": 0.0,
+        "format": "generative"
+      }
+    }
+  }
+}

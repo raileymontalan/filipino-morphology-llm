@@ -42,9 +42,14 @@ We compare three approaches:
 - **Word frequencies**: 118,801 entries for frequency-aware sampling
 
 ### Tokenization
-- **Patok**: Affix-aware expand-contract tokenization (from StochasTok)
-- **StochasTok**: Stochastic token expansion (from StochasTok)
-- **Affix decomposition**: Algorithm for handling out-of-vocabulary affixes
+- **Patok**: Morphology-aware tokenization with Aho-Corasick affix detection
+  - Contract-expand with 95% affix preservation
+  - Re-expands by splitting off known affixes ("maganda" → "ma" + "ganda")
+  - Handles reduplication ("gaganda" → "ga" + "ganda")
+  - Uses 92 Filipino affixes (data/affixes/filipino_affixes.txt)
+  - `src/tokenization/patok_morphology.py`
+- **StochasTok**: Stochastic token expansion baseline
+- **Affix decomposition**: Handles out-of-vocabulary affixes
 
 ### Analysis Tools
 - **MorphScore**: Measures alignment between token and morpheme boundaries
@@ -81,18 +86,23 @@ GPT-2:     mat | ul | og
 
 **Finding**: ~55% of Filipino affixes require decomposition into sub-tokens.
 
-### Oracle Analysis
+### Tokenization Comparison
 
-We tested an oracle tokenizer that splits at known morpheme boundaries before applying BPE:
+We compared three approaches on 100 morpheme-annotated Filipino words:
 
-| Metric | GPT-2 | Oracle | Δ |
-|--------|-------|--------|---|
-| MorphScore | 0.235 | 0.990 | +0.755 |
-| Boundary F1 | 0.165 | 0.643 | +0.478 |
+| Metric | GPT-2 Baseline | Real Patok | Oracle | Patok Improvement |
+|--------|----------------|------------|--------|-------------------|
+| MorphScore | 0.235 | 0.657 | 0.990 | +0.422 (+179%) |
+| Boundary F1 | 0.165 | 0.365 | 0.643 | +0.199 (+121%) |
+| Fragmentation | 1.574 | 1.906 | 1.658 | +0.332 |
 
-**Finding**: Respecting morpheme boundaries could improve alignment by 320%, establishing an upper bound for what morphologically-aware tokenization might achieve.
+**Findings**:
+- Real Patok substantially improves morpheme boundary alignment (+179% MorphScore)
+- Captures 56% of oracle's theoretical maximum improvement
+- Higher fragmentation expected (splitting at morpheme boundaries)
+- Oracle represents upper bound with known boundaries
 
-**Note**: This is an oracle experiment (we provided the boundaries). Real Patok would need to learn these during training.
+**Note**: Oracle uses ground-truth morpheme boundaries. Real Patok uses 92 Filipino affixes + reduplication detection.
 
 ## Getting Started
 
@@ -206,6 +216,19 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Morphology-Aware Tokenization
+
+```python
+import tiktoken
+from src.tokenization.patok_morphology import MorphologyAwarePatokProcessor
+
+tokenizer = tiktoken.get_encoding("gpt2")
+patok = MorphologyAwarePatokProcessor(tokenizer)
+
+text = "Nagkukumahog na pinadalhan ng magagandang parlorista"
+token_ids = patok.process(text)
+```
+
 ### Analyze Tokenizer
 
 Check affix coverage:
@@ -233,27 +256,12 @@ python scripts/analyze_tokenization_simple.py
 python scripts/compare_tokenizers.py
 ```
 
-## Implementation Status
+## What Still Needs Doing
 
-### ✅ Completed
-- Baseline training infrastructure (NeMo + PBS)
-- All tokenization processors (Baseline, StochasTok, Patok)
-- Complete evaluation framework (2,236 tasks)
-- Baseline analysis (MorphScore = 0.235)
-- Data preprocessing pipeline
-
-### ⏳ In Progress
-- Converting seapile to Megatron binary format
-- Baseline training (Gemma 3 1B with vanilla tokenization)
-
-### ❌ To Do
-- Integrate StochasTok with NeMo pipeline
-- Integrate Patok with NeMo pipeline
-- Build automated evaluation pipeline
-- Run comparison experiments (Baseline vs. StochasTok vs. Patok)
-- Statistical analysis and paper writing
-
-**For detailed status**: See [docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md#current-implementation-status)
+1. **Train with Patok**: Apply morphology-aware tokenization during pre-training
+2. **Evaluate on tasks**: Test on 2,236 evaluation items
+3. **Measure downstream**: Compare Patok vs baseline on hierarchical tasks
+4. **Get Filipino corpus**: Need training data for pre-training
 
 ## Key Files
 
@@ -272,7 +280,7 @@ python scripts/compare_tokenizers.py
 
 ### Analysis
 - `results/tokenization_baseline.json` - GPT-2 baseline metrics
-- `results/tokenization_comparison.json` - Oracle vs baseline
+- `results/tokenization_comparison.json` - GPT-2 vs Oracle vs Real Patok
 - `data/vocabularies/affix_analysis_*.json` - Coverage analyses
 
 ## Attribution
@@ -325,31 +333,53 @@ For detailed component attribution, see the full file listing in the repository 
 
 ## New Contributions
 
-- Unified monorepo structure
+- Morphology-aware Patok with Aho-Corasick affix detection
 - 472 morpheme-annotated Filipino words
 - 1,196 hierarchical diagnostic tasks (6 levels)
 - Baseline BPE analysis (MorphScore = 0.235)
 - Affix coverage analysis (44.6% vocabulary coverage)
-- Oracle upper bound analysis (MorphScore = 0.990)
+- Morphology-aware tokenization comparison (Patok: +179% MorphScore)
 
 ## Citation
 
 If you use this repository, please cite:
 
-**StochasTok**:
 ```bibtex
-@article{sims2025stochastok,
-  title={Stochastic Tokenization Improves Subword Understanding},
-  author={Sims, Anya and others},
-  year={2025}
+@misc{africa2025filipino,
+  title={Filipino Morphology-Aware Language Model},
+  author={Africa, David Demitri and Montalan, Jann Railey and Gamboa, Lance and
+          Flores, Richell Isaiah and Layacan, Jimson Paulo and
+          Susanto, Yosephine and Ngui, Jian Gang},
+  year={2025},
+  note={Author order to be determined}
 }
 ```
 
-**PACUTE**:
+**Original Sources**:
+
+**StochasTok**:
 ```bibtex
-@misc{pacute2024,
-  title={Philippine Annotated Corpus for Understanding Tagalog Entities},
-  year={2024}
+@misc{sims2025stochastokimprovingfinegrainedsubword,
+  title={StochasTok: Improving Fine-Grained Subword Understanding in LLMs},
+  author={Anya Sims and Thom Foster and Klara Kaleb and Tuan-Duy H. Nguyen and
+          Joseph Lee and Jakob N. Foerster and Yee Whye Teh and Cong Lu},
+  year={2025},
+  eprint={2506.01687},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL},
+  url={https://arxiv.org/abs/2506.01687}
+}
+```
+
+**PACUTE** (same as main citation):
+```bibtex
+@misc{africa2025filipino,
+  title={Filipino Morphology-Aware Language Model},
+  author={Africa, David Demitri and Montalan, Jann Railey and Gamboa, Lance and
+          Flores, Richell Isaiah and Layacan, Jimson Paulo and
+          Susanto, Yosephine and Ngui, Jian Gang},
+  year={2025},
+  note={Author order to be determined}
 }
 ```
 
