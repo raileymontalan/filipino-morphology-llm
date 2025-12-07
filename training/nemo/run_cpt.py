@@ -59,8 +59,8 @@ def parse_args():
     parser.add_argument(
         "--data-path",
         type=str,
-        default="/workspace/data/corpora/seapile-v2.jsonl",
-        help="Path to training data (JSONL format)",
+        default="/workspace/data/processed/seapile-v2",
+        help="Path prefix for preprocessed Megatron binary files (without _text_document suffix)",
     )
     parser.add_argument(
         "--seq-length",
@@ -202,15 +202,28 @@ def main():
         print(f"{arg:25s}: {value}")
     print("=" * 80 + "\n")
     
-    # Verify data exists
-    data_path = Path(args.data_path)
-    if not data_path.exists():
-        print(f"✗ Error: Data file not found: {data_path}")
-        print("\nPlease prepare your data first:")
-        print("  python src/data_preprocessing/prepare_seapile.py")
+    # Verify preprocessed data exists (Megatron binary format)
+    # The data path should be a prefix like "data/processed/seapile-v2"
+    # which will have corresponding files: seapile-v2_text_document.bin and .idx
+    data_prefix = args.data_path
+    bin_path = Path(f"{data_prefix}_text_document.bin")
+    idx_path = Path(f"{data_prefix}_text_document.idx")
+    
+    if not bin_path.exists() or not idx_path.exists():
+        print(f"✗ Error: Preprocessed Megatron binary files not found")
+        print(f"  Expected: {bin_path}")
+        print(f"  Expected: {idx_path}")
+        print()
+        print("Please preprocess your data first:")
+        print("  python scripts/preprocess_data.py \\")
+        print(f"    --input data/corpora/seapile-v2.jsonl \\")
+        print(f"    --output-prefix {data_prefix} \\")
+        print(f"    --tokenizer-model {args.model}")
         sys.exit(1)
     
-    print(f"✓ Data file found: {data_path}")
+    print(f"✓ Preprocessed data found:")
+    print(f"  Binary: {bin_path} ({bin_path.stat().st_size / 1e9:.2f} GB)")
+    print(f"  Index:  {idx_path} ({idx_path.stat().st_size / 1e6:.2f} MB)")
     
     # Set up WandB logger
     print("Setting up WandB logger...")
@@ -219,7 +232,7 @@ def main():
     # Configure the data module
     print(f"Configuring data module...")
     data = PreTrainingDataModule(
-        paths=[str(data_path)],
+        paths=[data_prefix],  # Use the preprocessed data prefix (without _text_document)
         seq_length=args.seq_length,
         global_batch_size=args.global_batch_size,
         micro_batch_size=args.micro_batch_size,

@@ -1,6 +1,22 @@
 # Filipino Morphology LLM
 
-Unified framework for morphological tokenization and evaluation in Filipino. Merges [StochasTok](https://github.com/anyasims/stochastok) (morphologically-aware tokenization) with [PACUTE](https://github.com/DavidDemitriAfrica/pacute) (Filipino linguistic evaluation).
+Research project testing whether **affix-aware continued pretraining** improves language model performance on Filipino morphological tasks.
+
+> **📖 New to this project?** Read **[docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md)** for the complete research design, experimental setup, and expected outcomes.
+
+## Research Question
+
+**Can tokenization that preserves morpheme boundaries improve LLM understanding of agglutinative morphology?**
+
+We compare three approaches:
+1. **Baseline**: Standard BPE (GPT-2, Gemma)
+2. **StochasTok**: Stochastic token expansion [(Sims et al. 2025)](https://github.com/anyasims/stochastok)
+3. **Patok** (new): Affix-aware expansion with Filipino linguistic guidance
+
+**Models**: GPT-2 (117M) and Gemma 3 1B (1B parameters)  
+**Evaluation**: 2,236 morphological tasks across 5 benchmarks
+
+---
 
 ## What This Repository Contains
 
@@ -81,70 +97,103 @@ We tested an oracle tokenizer that splits at known morpheme boundaries before ap
 ## Getting Started
 
 ### Prerequisites
-- NVIDIA GPU system with **Enroot** (or Singularity/Apptainer as alternative)
-- 20GB free disk space on `/scratch`
+- NVIDIA GPU cluster with **PBS job scheduler** and **Enroot** container runtime
+- 20GB free disk space for container and caches
 - Weights & Biases account ([free signup](https://wandb.ai))
+- HuggingFace account for model downloads
 
-### Quick Setup (Enroot - Recommended)
+### Quick Setup (PBS + Enroot)
 
 ```bash
 # 1. Configure environment
 cp .env.example .env
-nano .env  # Add your WANDB_API_KEY, HF_TOKEN, ENROOT_PATH, BIND_MOUNTS
+nano .env  # Add your WANDB_API_KEY, HF_TOKEN, ENROOT paths, BIND_MOUNTS
 source .env
 
-# 2. Setup NeMo Framework container (~15 minutes)
-bash setup_enroot.sh
+# 2. Setup NeMo Framework container (~15 minutes, one-time setup)
+bash training/nemo/setup/setup_enroot.sh
 
 # 3. Verify installation
-./run_in_enroot.sh python -c "import torch, nemo; print(f'PyTorch {torch.__version__}, NeMo {nemo.__version__}')"
-
-# 4. Submit training job
-source .env
-qsub jobs/submit_cpt_enroot.sh
+enroot list  # Should show: nemo_framework
 ```
 
-### Alternative Setup (Singularity/Apptainer)
+### Data Preprocessing (Required Before Training!)
+
+NeMo requires data in **Megatron binary format** (`.bin` + `.idx` files), not raw JSONL.
 
 ```bash
-# 2. Pull container with Singularity
-bash setup_singularity.sh $CONTAINER_CACHEDIR
+# Option 1: Test with one chunk first (recommended)
+qsub jobs/preprocess_test_chunk1.pbs
 
-# 3. Verify with Singularity
-./run_in_singularity.sh python -c "import torch, nemo; print(f'PyTorch {torch.__version__}, NeMo {nemo.__version__}')"
+# Option 2: Preprocess full dataset
+qsub jobs/preprocess_data.pbs
 
-# 4. Submit with Singularity
-qsub jobs/submit_cpt_singularity.sh
+# Option 3: Parallel processing (20x faster!)
+# Edit jobs/preprocess_data_parallel.pbs: change #PBS -J 1-1 to #PBS -J 1-20
+qsub jobs/preprocess_data_parallel.pbs
+
+# Verify outputs
+ls -lh data/processed/*.bin
+```
+
+See **[docs/SETUP.md](docs/SETUP.md)** for detailed preprocessing guide.
+
+### Training
+
+```bash
+# 1. Test training (1 GPU, 10 steps, ~5 minutes)
+qsub jobs/run_cpt_test.pbs
+
+# 2. Check test results
+qstat
+tail -f /scratch_aisg/SPEC-SF-AISG/railey/logs/<JOB_ID>.OU
+
+# 3. If test succeeds, run full training (multi-GPU)
+qsub jobs/run_cpt.pbs
 ```
 
 ### Documentation
-- **[SETUP.md](SETUP.md)** - Detailed installation, configuration, troubleshooting, and sharing guidelines
-- **`.env.example`** - Environment variable template with explanations
+- **[docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md)** - 📖 **START HERE**: Research design & experimental setup
+- **[docs/SETUP.md](docs/SETUP.md)** - Environment setup & data preprocessing
+- **[docs/USAGE.md](docs/USAGE.md)** - Training workflow & PBS job reference
+- **[docs/AFFIX_PROCESSING.md](docs/AFFIX_PROCESSING.md)** - Patok implementation details
+- **[docs/HIERARCHICAL_TASKS.md](docs/HIERARCHICAL_TASKS.md)** - Hierarchical benchmark design
+- **[jobs/QUICK_REFERENCE_PBS.sh](jobs/QUICK_REFERENCE_PBS.sh)** - PBS commands cheatsheet
+- **`.env.example`** - Environment variable template
 
 ### Need Help?
-- Check [Common Issues](SETUP.md#common-issues) in SETUP.md
-- Review [Configuration](SETUP.md#configuration) for environment variables
-- See [Sharing This Code](SETUP.md#sharing-this-code) before collaborating
+- **Research context**: [docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md)
+- **Setup issues**: [docs/SETUP.md](docs/SETUP.md)
+- **Training issues**: [docs/USAGE.md](docs/USAGE.md)
 
 ## Repository Structure
 
 ```
 filipino-morphology-llm/
-├── src/
-│   ├── tokenization/          # Patok, StochasTok, affix decomposition
-│   ├── evaluation/            # PACUTE + hierarchical tasks
-│   ├── analysis/              # Morphological metrics
-│   ├── models/                # Transformer architecture
-│   ├── training/              # Training infrastructure
-│   └── data_processing/       # Dataset preprocessing
+├── src/                        # Core library code
+│   ├── tokenization/           # Patok, StochasTok, affix decomposition
+│   ├── evaluation/             # PACUTE + hierarchical tasks
+│   ├── analysis/               # Morphological metrics
+│   ├── models/                 # Transformer architecture
+│   ├── training/               # Training infrastructure
+│   └── data_processing/        # Dataset preprocessing
+├── scripts/                    # Utilities & tools
+│   ├── setup/                  # Environment setup scripts
+│   ├── data/                   # Data preprocessing
+│   ├── training/               # Training entrypoints
+│   └── analysis/               # Analysis & evaluation
 ├── data/
-│   ├── affixes/               # Filipino affix list
-│   ├── benchmarks/            # 2,236 evaluation items
-│   ├── corpora/               # Annotations, syllables, frequencies
-│   └── vocabularies/          # Tokenizer analyses
-├── experiments/               # Training and evaluation scripts
-├── scripts/                   # Analysis utilities
-└── configs/                   # Training configurations
+│   ├── affixes/                # Filipino affix list
+│   ├── benchmarks/             # 2,236 evaluation items
+│   ├── corpora/                # Annotations, syllables, frequencies
+│   ├── chunks/                 # Split JSONL files for preprocessing
+│   └── processed/              # Megatron binary format (.bin + .idx)
+├── docs/                       # Documentation
+│   ├── SETUP.md                # Environment & preprocessing
+│   └── USAGE.md                # Training & job submission
+├── jobs/                       # PBS job scripts
+├── experiments/                # Training and evaluation scripts
+└── configs/                    # Training configurations
 ```
 
 ## Installation
@@ -184,15 +233,27 @@ python scripts/analyze_tokenization_simple.py
 python scripts/compare_tokenizers.py
 ```
 
-## What Still Needs Doing
+## Implementation Status
 
-This repository provides the evaluation framework and baseline measurements. To complete the research:
+### ✅ Completed
+- Baseline training infrastructure (NeMo + PBS)
+- All tokenization processors (Baseline, StochasTok, Patok)
+- Complete evaluation framework (2,236 tasks)
+- Baseline analysis (MorphScore = 0.235)
+- Data preprocessing pipeline
 
-1. **Train Patok model**: Apply Patok tokenization during training
-2. **Evaluate on tasks**: Test on 2,236 evaluation items
-3. **Measure downstream performance**: Show improved tokenization → better morphological understanding
+### ⏳ In Progress
+- Converting seapile to Megatron binary format
+- Baseline training (Gemma 3 1B with vanilla tokenization)
 
-The Patok code exists (from StochasTok) but has not been trained or evaluated on Filipino.
+### ❌ To Do
+- Integrate StochasTok with NeMo pipeline
+- Integrate Patok with NeMo pipeline
+- Build automated evaluation pipeline
+- Run comparison experiments (Baseline vs. StochasTok vs. Patok)
+- Statistical analysis and paper writing
+
+**For detailed status**: See [docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md#current-implementation-status)
 
 ## Key Files
 
@@ -216,19 +277,51 @@ The Patok code exists (from StochasTok) but has not been trained or evaluated on
 
 ## Attribution
 
-This repository merges two existing repositories:
+This repository builds upon two existing repositories with proper attribution:
 
-**StochasTok** (MIT License)
-- Source: https://github.com/anyasims/stochastok
-- Components: Tokenization, models, training, data processing
-- Paper: Sims et al. (2025). "Stochastic Tokenization Improves Subword Understanding"
+### StochasTok (MIT License)
+- **Source**: https://github.com/anyasims/stochastok
+- **Fork**: https://github.com/raileymontalan/stochastok
+- **Components**: 
+  - Tokenization (`src/tokenization/patok_processor.py`, `stochastok_processor.py`)
+  - Model architecture (`src/models/`)
+  - Training infrastructure (`src/training/`)
+  - Data processing (`src/data_processing/`)
+  - Evaluation framework (`src/evaluation/benchmarks/`)
+- **Paper**: Sims et al. (2025). "Stochastic Tokenization Improves Subword Understanding"
 
-**PACUTE** (CC0 1.0 Universal)
-- Source: Philippine Annotated Corpus for Understanding Tagalog Entities
-- Components: Evaluation tasks, morphological operations, benchmarks
-- Data: 1,040 evaluation items, 16,828 syllabified words
+### PACUTE (CC0 1.0 Universal)
+- **Source**: Philippine Annotated Corpus for Understanding Tagalog Entities
+- **Components**:
+  - Task generation (`src/evaluation/affixation.py`, `composition.py`, `manipulation.py`, `syllabification.py`)
+  - Morphological operations (`src/evaluation/string_operations.py`, `syllabification_operations.py`)
+  - Evaluation data (`data/benchmarks/*.jsonl` - 1,040 items)
+  - Linguistic data (`data/corpora/pacute_data/` - syllables, frequencies)
 
-See [ORIGINAL_SOURCES.md](ORIGINAL_SOURCES.md) for detailed attribution.
+### Key Files from Source Repositories
+
+**From StochasTok:**
+- Tokenization: `patok_processor.py`, `stochastok_processor.py`
+- Models: Complete transformer implementation in `src/models/`
+- Training: Full training framework in `src/training/`
+- Experiments: `experiments/train.py`, `experiments/eval.py`
+- Configs: `configs/pretraining.yaml`, `configs/instruction_tuning.yaml`
+- Data: `data/affixes/filipino_affixes.txt` (93 affixes)
+
+**From PACUTE:**
+- Tasks: Affixation, composition, manipulation, syllabification
+- Data: `data/benchmarks/*.jsonl` (1,040 evaluation items)
+- Operations: String and syllabification primitives
+- Corpora: 16,828 syllabified words, 2M+ word frequencies
+
+All original functionality has been preserved:
+- ✅ All Python files from both repositories
+- ✅ All configuration files
+- ✅ All data files
+- ✅ All tests and notebooks
+- ✅ All documentation
+
+For detailed component attribution, see the full file listing in the repository structure above.
 
 ## New Contributions
 

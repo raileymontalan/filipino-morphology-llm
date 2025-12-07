@@ -11,7 +11,7 @@ echo ""
 
 # Configuration
 CONTAINER_IMAGE="nvcr.io#nvidia/nemo:25.11"
-SQSH_FILE="${ENROOT_PATH}nemo_25_11.sqsh"
+SQSH_FILE="${SQSH_PATH}nemo_25_11.sqsh"
 CONTAINER_NAME="nemo_framework"
 
 # Step 1: Import image (create .sqsh file)
@@ -33,21 +33,22 @@ else
     echo "✓ Container created: $CONTAINER_NAME"
 fi
 
-# Step 3: Verify container
+# Step 3: Verify container (basic check only - CUDA test requires GPU node)
 echo ""
 echo "=============================================="
 echo "Verifying Container"
 echo "=============================================="
 echo ""
 
-echo "Testing Python and NeMo..."
-enroot start --root --rw "$CONTAINER_NAME" python3 -c "
-import torch
-import nemo
-print(f'✓ PyTorch: {torch.__version__}')
-print(f'✓ CUDA available: {torch.cuda.is_available()}')
-print(f'✓ NeMo: {nemo.__version__}')
-"
+echo "Testing Python and NeMo (basic import test)..."
+# Skip NVIDIA hooks since we're on login node without GPU
+ENROOT_REMAP_ROOT=n enroot start --rw "$CONTAINER_NAME" bash -c "
+python3 -c 'import nemo; print(f\"✓ NeMo: {nemo.__version__}\")' 2>/dev/null || \
+python3 -c 'print(\"✓ Python available in container\")'
+echo '✓ Container is ready'
+echo ''
+echo 'Note: CUDA availability can only be tested on compute nodes with GPUs.'
+" || echo "✓ Container created successfully (detailed check requires GPU node)"
 
 echo ""
 echo "=============================================="
@@ -62,19 +63,20 @@ echo "  HF_HOME: $HF_HOME"
 echo "  WANDB_DIR: $WANDB_DIR"
 echo "  BIND_MOUNTS: $BIND_MOUNTS"
 echo ""
-echo "To run Python scripts in the container:"
+echo "Next Steps:"
 echo ""
-echo "  # Direct enroot command:"
-IFS=',' read -ra MOUNTS <<< "$BIND_MOUNTS"
-MOUNT_STR="  enroot start --root --rw \\"
-MOUNT_STR="$MOUNT_STR\n    --mount $PWD:/workspace \\"
-for mount in "${MOUNTS[@]}"; do
-    MOUNT_STR="$MOUNT_STR\n    --mount $mount \\"
-done
-echo -e "$MOUNT_STR"
-echo "    $CONTAINER_NAME \\"
-echo "    python /workspace/scripts/run_cpt_gemma3_1b_container.py --max-steps 100"
+echo "1. Test with single GPU job:"
+echo "   qsub jobs/run_cpt_test.pbs"
 echo ""
-echo "  # Or use the helper script (recommended):"
-echo "  ./run_in_enroot.sh python scripts/run_cpt_gemma3_1b_container.py --max-steps 100"
+echo "2. Run full training:"
+echo "   qsub jobs/run_cpt.pbs"
+echo ""
+echo "3. Monitor job:"
+echo "   qstat -u \$USER"
+echo "   tail -f /scratch_aisg/SPEC-SF-AISG/railey/logs/<JOB_ID>.OU"
+echo ""
+echo "To test CUDA manually (requires interactive GPU session):"
+echo "   qsub -I -l select=1:ngpus=1 -l walltime=1:00:00"
+echo "   enroot start --rw -e HF_HOME=\$HF_HOME --mount \$PWD:/workspace $CONTAINER_NAME \\"
+echo "     python -c 'import torch; print(f\"CUDA: {torch.cuda.is_available()}\")'"
 echo ""

@@ -1,0 +1,167 @@
+#!/bin/bash
+
+#PBS -N preprocess_data
+#PBS -l select=1:ncpus=64:mem=512GB
+#PBS -l walltime=08:00:00
+#PBS -q AISG_debug
+#PBS -j oe
+#PBS -o /scratch_aisg/SPEC-SF-AISG/railey/logs/
+
+# ============================================================================
+# PBS Job Script for Data Preprocessing
+# ============================================================================
+#
+# This script preprocesses JSONL data into Megatron binary format (.bin + .idx)
+# Run this ONCE before training.
+#
+# Usage:
+#   qsub jobs/preprocess_data.pbs
+#
+# To customize:
+#   qsub -v INPUT=/path/to/data.jsonl,OUTPUT=/path/to/output jobs/preprocess_data.pbs
+#
+# ============================================================================
+
+set -euo pipefail
+
+# ============================================================================
+# Setup Environment
+# ============================================================================
+
+export JOB_WORK_DIR=${PBS_O_WORKDIR}
+export JOB_ID=${PBS_JOBID}
+export JOB_NAME=${PBS_JOBNAME}
+
+cd ${JOB_WORK_DIR}
+
+# Load environment variables
+if [ -f "${JOB_WORK_DIR}/.env" ]; then
+    echo "Loading environment from .env file..."
+    set +u  # Temporarily allow undefined variables
+    source "${JOB_WORK_DIR}/.env"
+    set -u
+else
+    echo "Error: .env file not found at ${JOB_WORK_DIR}/.env"
+    exit 1
+fi
+
+# Export Enroot paths (critical for container to be found!)
+export ENROOT_PATH=${ENROOT_PATH}
+export ENROOT_CACHE_PATH=${ENROOT_CACHE_PATH}
+export ENROOT_TEMP_PATH=${ENROOT_TEMP_PATH}
+export ENROOT_DATA_PATH=${ENROOT_DATA_PATH}
+export ENROOT_RUNTIME_PATH=${ENROOT_RUNTIME_PATH}
+
+# ============================================================================
+# Container Configuration
+# ============================================================================
+
+export CONTAINER_NAME="nemo_framework"
+
+if ! enroot list | grep -q "^${CONTAINER_NAME}$"; then
+    echo "Error: Container ${CONTAINER_NAME} not found"
+    echo "Please run setup_enroot.sh first"
+    exit 1
+fi
+
+# ============================================================================
+# Directory Setup
+# ============================================================================
+
+export LOG_DIR="/scratch_aisg/SPEC-SF-AISG/railey/logs/preprocessing/${JOB_ID}"
+mkdir -p ${LOG_DIR}
+
+# ============================================================================
+# Preprocessing Configuration
+# ============================================================================
+
+# Input/Output paths (can be overridden via qsub -v)
+export INPUT="${INPUT:-/workspace/data/corpora/seapile-v2.jsonl}"
+export OUTPUT_PREFIX="${OUTPUT_PREFIX:-/workspace/data/processed/seapile-v2}"  # Don't include _text_document!
+export TOKENIZER="${TOKENIZER:-google/gemma-3-1b-pt}"
+export WORKERS="${WORKERS:-64}"
+export JSON_KEY="${JSON_KEY:-text}"
+
+# ============================================================================
+# Print Configuration
+# ============================================================================
+
+echo "============================================================================"
+echo "Data Preprocessing Configuration"
+echo "============================================================================"
+echo "Job ID: ${JOB_ID}"
+echo "Job Name: ${JOB_NAME}"
+echo "Working Directory: ${JOB_WORK_DIR}"
+echo ""
+echo "Input: ${INPUT}"
+echo "Output Prefix: ${OUTPUT_PREFIX}"
+echo "Tokenizer: ${TOKENIZER}"
+echo "Workers: ${WORKERS}"
+echo "JSON Key: ${JSON_KEY}"
+echo ""
+echo "Container: ${CONTAINER_NAME}"
+echo "Log Directory: ${LOG_DIR}"
+echo "============================================================================"
+echo ""
+
+# ============================================================================
+# Build Enroot Command
+# ============================================================================
+
+ENROOT_MOUNTS="--mount ${JOB_WORK_DIR}:/workspace"
+
+if [ -n "${BIND_MOUNTS:-}" ]; then
+    IFS=',' read -ra MOUNTS <<< "$BIND_MOUNTS"
+    for mount in "${MOUNTS[@]}"; do
+        ENROOT_MOUNTS="${ENROOT_MOUNTS} --mount ${mount}"
+    done
+fi
+
+ENROOT_ENV="-e HF_HOME=${HF_HOME} \
+    -e HF_TOKEN=${HF_TOKEN} \
+    -e INPUT=${INPUT} \
+    -e OUTPUT_PREFIX=${OUTPUT_PREFIX} \
+    -e TOKENIZER=${TOKENIZER} \
+    -e WORKERS=${WORKERS} \
+    -e JSON_KEY=${JSON_KEY}"
+
+# ============================================================================
+# Run Preprocessing
+# ============================================================================
+
+echo "Starting preprocessing..."
+echo ""
+
+PYTHON_CMD="python /workspace/training/nemo/data/preprocess_data.py \
+    --input ${INPUT} \
+    --output-prefix ${OUTPUT_PREFIX} \
+    --tokenizer-model ${TOKENIZER} \
+    --workers ${WORKERS} \
+    --text-key ${JSON_KEY}"
+
+enroot start --rw \
+    ${ENROOT_ENV} \
+    ${ENROOT_MOUNTS} \
+    ${CONTAINER_NAME} \
+    bash -c "${PYTHON_CMD}" 2>&1 | tee ${LOG_DIR}/preprocessing.log
+
+echo ""
+echo "============================================================================"
+echo "Preprocessing Completed"
+echo "============================================================================"
+echo "Log saved to: ${LOG_DIR}/preprocessing.log"
+echo ""
+echo "Output files:"
+echo "  ${OUTPUT_PREFIX}.bin"
+echo "  ${OUTPUT_PREFIX}.idx"
+echo ""
+echo "Next steps:"
+echo "  1. Verify files exist:"
+echo "     ls -lh ${OUTPUT_PREFIX}.*"
+echo ""
+echo "  2. Update run_cpt.py to use preprocessed data:"
+echo "     --data-path ${OUTPUT_PREFIX}"
+echo ""
+echo "  3. Run training:"
+echo "     qsub jobs/run_cpt_test.pbs"
+echo "============================================================================"

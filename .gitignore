@@ -80,6 +80,8 @@ temp/
 
 # Pre-training corpora
 data/corpora/*.jsonl
+data/chunks/*
+data/processed/*
 
 # Environment variables and secrets
 .env

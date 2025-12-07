@@ -1,0 +1,343 @@
+#!/bin/bash
+
+#PBS -N gemma3_cpt
+#PBS -l select=1:ncpus=32:ngpus=4:mem=256GB
+#PBS -l walltime=04:00:00
+#PBS -q AISG_debug
+#PBS -j oe
+#PBS -o /scratch_aisg/SPEC-SF-AISG/railey/logs/
+
+# ============================================================================
+# PBS Job Script for Continued Pretraining with NeMo Framework Container
+# ============================================================================
+#
+# This script runs the CPT job using Enroot container on PBS (Hopper cluster)
+#
+# Usage:
+#   qsub jobs/run_cpt.pbs
+#
+# To customize the job, you can override environment variables:
+#   qsub -v MAX_STEPS=1000,GBS=512 jobs/run_cpt.pbs
+#
+# ============================================================================
+
+set -euo pipefail
+
+# ============================================================================
+# Determine Job Scheduler and Set Variables
+# ============================================================================
+
+if [ -n "${SLURM_JOB_ID:-}" ]; then
+    # SLURM environment
+    export JOB_WORK_DIR=${SLURM_SUBMIT_DIR}
+    export JOB_ID=${SLURM_JOB_ID}
+    export JOB_NAME=${SLURM_JOB_NAME}
+    hosts=$(scontrol show hostnames ${SLURM_JOB_NODELIST})
+    export MASTER_ADDR=$(scontrol show hostnames ${SLURM_JOB_NODELIST} | head -n 1)
+    export NUM_NODES=${SLURM_JOB_NUM_NODES}
+elif [ -n "${PBS_JOBID:-}" ]; then
+    # PBS environment
+    export JOB_WORK_DIR=${PBS_O_WORKDIR}
+    export JOB_ID=${PBS_JOBID}
+    export JOB_NAME=${PBS_JOBNAME}
+    hosts=$(cat $PBS_NODEFILE)
+    export MASTER_ADDR=$(cat $PBS_NODEFILE | head -n 1)
+    export NUM_NODES=$(cat $PBS_NODEFILE | wc -l)
+fi
+
+# ============================================================================
+# Project Paths and Configuration
+# ============================================================================
+
+# Change to working directory
+cd ${JOB_WORK_DIR}
+
+# Load environment variables from .env file
+if [ -f "${JOB_WORK_DIR}/.env" ]; then
+    echo "Loading environment from .env file..."
+    source "${JOB_WORK_DIR}/.env"
+else
+    echo "Warning: .env file not found at ${JOB_WORK_DIR}/.env"
+    echo "Please create .env file with required configuration"
+    exit 1
+fi
+
+# ============================================================================
+# Container Configuration
+# ============================================================================
+
+export CONTAINER_NAME="nemo_framework"
+export SQSH_FILE="${SQSH_PATH}nemo_25_11.sqsh"
+
+# Verify container exists
+if ! enroot list | grep -q "^${CONTAINER_NAME}$"; then
+    echo "Error: Container ${CONTAINER_NAME} not found"
+    echo "Please run setup_enroot.sh first to create the container"
+    exit 1
+fi
+
+# ============================================================================
+# Distributed Training Configuration
+# ============================================================================
+
+export GPUS_PER_NODE=$(nvidia-smi -L | wc -l)
+export WORLD_SIZE=$(($GPUS_PER_NODE * $NUM_NODES))
+export MASTER_PORT=$((10000 + $RANDOM % 10000))
+
+# ============================================================================
+# Directory Setup
+# ============================================================================
+
+export LOG_DIR="${LOG_DIR:-/scratch_aisg/SPEC-SF-AISG/railey/logs/training}/${JOB_ID}"
+export CKPT_DIR="/scratch_aisg/SPEC-SF-AISG/railey/logs/checkpoints/gemma3-cpt-${JOB_ID}"
+
+mkdir -p ${LOG_DIR}
+mkdir -p ${CKPT_DIR}
+mkdir -p ${LOG_DIR}/envvar
+
+# ============================================================================
+# Training Hyperparameters (Can be overridden via qsub -v)
+# ============================================================================
+
+# Data configuration
+export DATA_PATH="${DATA_PATH:-/workspace/data/corpora/seapile-v2_text_document}"
+export SEQ_LENGTH="${SEQ_LENGTH:-2048}"
+
+# Training configuration
+export MAX_STEPS="${MAX_STEPS:-100}"
+export GBS="${GBS:-256}"  # Global batch size
+export MBS="${MBS:-2}"    # Micro batch size
+export DEVICES="${DEVICES:-${GPUS_PER_NODE}}"
+
+# Optimizer configuration
+export LR="${LR:-1e-4}"
+export MIN_LR="${MIN_LR:-1e-5}"
+export WARMUP_STEPS="${WARMUP_STEPS:-50}"
+
+# Checkpoint configuration
+export CKPT_INTERVAL="${CKPT_INTERVAL:-50}"
+export RESUME_FROM="${RESUME_FROM:-google/gemma-3-1b-pt}"
+
+# Logging configuration
+export WANDB_PROJECT="${WANDB_PROJECT:-gemma3-seapile-cpt}"
+export WANDB_NAME="${WANDB_NAME:-gemma3-cpt-${JOB_ID}}"
+export LOG_EVERY_N_STEPS="${LOG_EVERY_N_STEPS:-10}"
+export VAL_CHECK_INTERVAL="${VAL_CHECK_INTERVAL:-50}"
+
+# ============================================================================
+# NCCL Configuration
+# ============================================================================
+
+export NCCL_DEBUG=INFO
+export NCCL_DEBUG_FILE="${LOG_DIR}/nccl/$(hostname).log"
+export NCCL_TIMEOUT=1800
+mkdir -p "${LOG_DIR}/nccl"
+
+# Fix for gloo fullMesh error (adjust interface name as needed for your cluster)
+export GLOO_SOCKET_IFNAME=ib0
+
+# ============================================================================
+# Additional Environment Variables
+# ============================================================================
+
+export TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128"
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export TORCHELASTIC_EXIT_TIMEOUT=120
+
+# ============================================================================
+# Copy Scripts to Log Directory (for reproducibility)
+# ============================================================================
+
+cp ${JOB_WORK_DIR}/jobs/run_cpt.pbs ${LOG_DIR}/
+cp ${JOB_WORK_DIR}/jobs/run_cpt.sh ${LOG_DIR}/
+cp ${JOB_WORK_DIR}/scripts/run_cpt.py ${LOG_DIR}/
+chmod +rx ${LOG_DIR}/*
+
+export BASH_SCRIPT="${LOG_DIR}/run_cpt.sh"
+export PYTHON_SCRIPT="${LOG_DIR}/run_cpt.py"
+
+# ============================================================================
+# Save Environment Variables
+# ============================================================================
+
+printenv | sort > ${LOG_DIR}/envvar/EnvVar_hostOS.log
+
+# ============================================================================
+# Print Configuration Summary
+# ============================================================================
+
+echo "============================================================================"
+echo "PBS Job Configuration"
+echo "============================================================================"
+echo "Job ID: ${JOB_ID}"
+echo "Job Name: ${JOB_NAME}"
+echo "Working Directory: ${JOB_WORK_DIR}"
+echo "Master Address: ${MASTER_ADDR}"
+echo "Number of Nodes: ${NUM_NODES}"
+echo "GPUs per Node: ${GPUS_PER_NODE}"
+echo "World Size: ${WORLD_SIZE}"
+echo "Master Port: ${MASTER_PORT}"
+echo ""
+echo "Container: ${CONTAINER_NAME}"
+echo "Container Image: ${SQSH_FILE}"
+echo ""
+echo "Training Configuration:"
+echo "  Data Path: ${DATA_PATH}"
+echo "  Sequence Length: ${SEQ_LENGTH}"
+echo "  Max Steps: ${MAX_STEPS}"
+echo "  Global Batch Size: ${GBS}"
+echo "  Micro Batch Size: ${MBS}"
+echo "  Learning Rate: ${LR}"
+echo "  Warmup Steps: ${WARMUP_STEPS}"
+echo ""
+echo "Output Directories:"
+echo "  Log Directory: ${LOG_DIR}"
+echo "  Checkpoint Directory: ${CKPT_DIR}"
+echo ""
+echo "WandB Configuration:"
+echo "  Project: ${WANDB_PROJECT}"
+echo "  Run Name: ${WANDB_NAME}"
+echo "============================================================================"
+echo ""
+
+# ============================================================================
+# Build Enroot Mount Arguments
+# ============================================================================
+
+ENROOT_MOUNTS=""
+
+# Mount project directory
+ENROOT_MOUNTS="${ENROOT_MOUNTS} --mount ${JOB_WORK_DIR}:/workspace"
+
+# Mount additional directories from BIND_MOUNTS
+if [ -n "${BIND_MOUNTS:-}" ]; then
+    IFS=',' read -ra MOUNTS <<< "$BIND_MOUNTS"
+    for mount in "${MOUNTS[@]}"; do
+        ENROOT_MOUNTS="${ENROOT_MOUNTS} --mount ${mount}"
+    done
+fi
+
+# ============================================================================
+# Build Environment Variables to Pass to Container
+# ============================================================================
+
+# Patterns for environment variables to pass to container
+PATTERN_DIR=".*_DIR"
+PATTERN_USER="USER_.+"
+PATTERN_JOB="JOB(W)?_.+"
+PATTERN_PYTHON="PYTHON_.+"
+PATTERN_TORCH="TORCH_.+"
+PATTERN_HF="HF_.+"
+PATTERN_NCCL="NCCL_.+"
+PATTERN_PROXY=".*_PROXY"
+PATTERN_WANDB="WANDB_.+"
+PATTERN_CUDA="CUDA_.+"
+PATTERN_PYTORCH="PYTORCH_.+"
+PATTERN_GLOO="GLOO_.+"
+PATTERN_TORCHELASTIC="TORCHELASTIC_.+"
+PATTERN_TOKENIZERS="TOKENIZERS_.+"
+
+SEARCH_PATTERN="(${PATTERN_DIR}|${PATTERN_USER}|${PATTERN_JOB}|${PATTERN_PYTHON}|${PATTERN_TORCH}|${PATTERN_HF}|${PATTERN_NCCL}|${PATTERN_PROXY}|${PATTERN_WANDB}|${PATTERN_CUDA}|${PATTERN_PYTORCH}|${PATTERN_GLOO}|${PATTERN_TORCHELASTIC}|${PATTERN_TOKENIZERS})"
+
+ENROOT_ENV=""
+
+echo "Collecting environment variables to pass to container..."
+while IFS= read -r line; do
+    var_name=$(echo "$line" | cut -d '=' -f 1)
+    
+    if [[ -n "$var_name" && "$var_name" =~ $SEARCH_PATTERN ]]; then
+        ENROOT_ENV="${ENROOT_ENV} -e ${var_name}=${!var_name}"
+    fi
+done < <(env)
+
+# Add critical training parameters
+ENROOT_ENV="${ENROOT_ENV} -e DATA_PATH=${DATA_PATH}"
+ENROOT_ENV="${ENROOT_ENV} -e SEQ_LENGTH=${SEQ_LENGTH}"
+ENROOT_ENV="${ENROOT_ENV} -e MAX_STEPS=${MAX_STEPS}"
+ENROOT_ENV="${ENROOT_ENV} -e GBS=${GBS}"
+ENROOT_ENV="${ENROOT_ENV} -e MBS=${MBS}"
+ENROOT_ENV="${ENROOT_ENV} -e DEVICES=${DEVICES}"
+ENROOT_ENV="${ENROOT_ENV} -e LR=${LR}"
+ENROOT_ENV="${ENROOT_ENV} -e MIN_LR=${MIN_LR}"
+ENROOT_ENV="${ENROOT_ENV} -e WARMUP_STEPS=${WARMUP_STEPS}"
+ENROOT_ENV="${ENROOT_ENV} -e CKPT_DIR=${CKPT_DIR}"
+ENROOT_ENV="${ENROOT_ENV} -e CKPT_INTERVAL=${CKPT_INTERVAL}"
+ENROOT_ENV="${ENROOT_ENV} -e RESUME_FROM=${RESUME_FROM}"
+ENROOT_ENV="${ENROOT_ENV} -e LOG_EVERY_N_STEPS=${LOG_EVERY_N_STEPS}"
+ENROOT_ENV="${ENROOT_ENV} -e VAL_CHECK_INTERVAL=${VAL_CHECK_INTERVAL}"
+
+# ============================================================================
+# Launch Training Job
+# ============================================================================
+
+echo "============================================================================"
+echo "Launching Training Job via Enroot"
+echo "============================================================================"
+echo ""
+
+launch_cmd="bash ${BASH_SCRIPT} \
+    ${GPUS_PER_NODE} \
+    ${WORLD_SIZE} \
+    ${NUM_NODES} \
+    ${MASTER_ADDR} \
+    ${MASTER_PORT}"
+
+# Multi-node execution
+if [ ${NUM_NODES} -gt 1 ]; then
+    echo "Multi-node training detected (${NUM_NODES} nodes)"
+    
+    # Get node rank for this node
+    export NODE_RANK=$(cat $PBS_NODEFILE | grep -n $(hostname) | cut -d: -f1 | head -1)
+    export NODE_RANK=$((NODE_RANK - 1))
+    
+    echo "Node rank: ${NODE_RANK}"
+    
+    # Append node rank to launch command
+    launch_cmd="${launch_cmd} ${NODE_RANK}"
+    
+    # Launch on all nodes
+    for i in $(seq 0 $((NUM_NODES - 1))); do
+        node=$(sed -n "$((i + 1))p" $PBS_NODEFILE)
+        echo "Launching on node ${i}: ${node}"
+        
+        if [ $i -eq 0 ]; then
+            # Master node (this node)
+            enroot start --rw \
+                ${ENROOT_ENV} \
+                ${ENROOT_MOUNTS} \
+                ${CONTAINER_NAME} \
+                bash -c "${launch_cmd}" 2>&1 | tee ${LOG_DIR}/master_node.log &
+        else
+            # Worker nodes
+            ssh ${node} "cd ${JOB_WORK_DIR} && \
+                enroot start --rw \
+                    ${ENROOT_ENV} \
+                    ${ENROOT_MOUNTS} \
+                    ${CONTAINER_NAME} \
+                    bash -c '${launch_cmd} ${i}'" \
+                > ${LOG_DIR}/node_${i}.log 2>&1 &
+        fi
+    done
+    
+    # Wait for all background jobs
+    wait
+else
+    # Single node execution
+    echo "Single-node training"
+    launch_cmd="${launch_cmd} 0"
+    
+    enroot start --rw \
+        ${ENROOT_ENV} \
+        ${ENROOT_MOUNTS} \
+        ${CONTAINER_NAME} \
+        bash -c "${launch_cmd}" 2>&1 | tee ${LOG_DIR}/training.log
+fi
+
+echo ""
+echo "============================================================================"
+echo "Job Completed"
+echo "============================================================================"
+echo "Logs saved to: ${LOG_DIR}"
+echo "Checkpoints saved to: ${CKPT_DIR}"
+echo "============================================================================"

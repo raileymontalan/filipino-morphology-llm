@@ -11,19 +11,19 @@ nano .env  # Add: HF_TOKEN, WANDB_API_KEY, ENROOT_PATH, HF_HOME, WANDB_DIR, BIND
 source .env
 
 # 2. Install (~15 minutes) - Using Enroot (recommended)
-bash setup_enroot.sh
+bash training/nemo/setup/setup_enroot.sh
 
 # 3. Verify
 ./run_in_enroot.sh python -c "import torch, nemo; print(f'PyTorch {torch.__version__}, NeMo {nemo.__version__}')"
 
 # 4. Train
-./run_in_enroot.sh python scripts/run_cpt_gemma3_1b_container.py --max-steps 100
+./run_in_enroot.sh python training/nemo/run_cpt.py --max-steps 100
 ```
 
 **Alternative (Singularity/Apptainer):**
 ```bash
 # 2. Install with Singularity
-bash setup_singularity.sh $CONTAINER_CACHEDIR
+bash training/nemo/setup/setup_singularity.sh $CONTAINER_CACHEDIR
 
 # 3-4. Use ./run_in_singularity.sh instead of ./run_in_enroot.sh
 ```
@@ -83,6 +83,7 @@ export WANDB_DIR=/scratch/$USER/logs/wandb
 
 # ===== Required: Enroot Configuration (Recommended) =====
 # Where Enroot stores container images and runtime data
+export SQSH_PATH=/scratch/$USER/sqsh/
 export ENROOT_PATH=/scratch/$USER/enroot/
 export ENROOT_DATA_PATH=$ENROOT_PATH/data
 export ENROOT_RUNTIME_PATH=$ENROOT_PATH/runtime
@@ -156,7 +157,7 @@ The container includes everything for training:
 
 ```bash
 # Run the setup (uses ENROOT_PATH from your .env)
-bash setup_enroot.sh
+bash training/nemo/setup/setup_enroot.sh
 ```
 
 This will (takes ~10-15 minutes):
@@ -174,7 +175,7 @@ If your system uses Singularity/Apptainer instead of Enroot:
 
 ```bash
 # Run the setup (uses $CONTAINER_CACHEDIR from your .env)
-bash setup_singularity.sh $CONTAINER_CACHEDIR
+bash training/nemo/setup/setup_singularity.sh $CONTAINER_CACHEDIR
 ```
 
 This will create a `.sif` file instead of `.sqsh` and use `run_in_singularity.sh` helper script.
@@ -288,14 +289,14 @@ Your environment is ready! Here's what to do next:
 **For Enroot (Recommended):**
 ```bash
 # 1. Prepare training data (if needed)
-python scripts/prepare_data.py
+python scripts/download_seapile.py
 
 # 2. Test training with 100 steps (interactive)
-./run_in_enroot.sh python scripts/run_cpt_gemma3_1b_container.py --max-steps 100
+./run_in_enroot.sh python training/nemo/run_cpt.py --max-steps 100
 
 # 3. Submit full training job to cluster
 source .env  # Make sure environment is loaded
-qsub jobs/submit_cpt_enroot.sh
+qsub jobs/run_cpt.pbs
 
 # 4. Monitor training
 tail -f logs/wandb/latest/output.log
@@ -304,10 +305,10 @@ tail -f logs/wandb/latest/output.log
 **For Singularity:**
 ```bash
 # 2. Use ./run_in_singularity.sh instead
-./run_in_singularity.sh python scripts/run_cpt_gemma3_1b_container.py --max-steps 100
+./run_in_singularity.sh python training/nemo/run_cpt.py --max-steps 100
 
 # 3. Submit Singularity job
-qsub jobs/submit_cpt_singularity.sh
+qsub jobs/run_cpt.pbs
 ```
 
 ---
@@ -328,9 +329,9 @@ echo $ENROOT_PATH          # For Enroot
 echo $CONTAINER_CACHEDIR   # For Singularity
 
 # Then run setup
-bash setup_enroot.sh                          # For Enroot
+bash training/nemo/setup/setup_enroot.sh                          # For Enroot
 # or
-bash setup_singularity.sh $CONTAINER_CACHEDIR # For Singularity
+bash training/nemo/setup/setup_singularity.sh $CONTAINER_CACHEDIR # For Singularity
 ```
 
 ### Issue 2: "No space left on device" during container import
@@ -351,9 +352,9 @@ export ENROOT_PATH=/scratch/$USER/enroot/
 
 # Reload and retry
 source .env
-bash setup_enroot.sh                          # For Enroot
+bash training/nemo/setup/setup_enroot.sh                          # For Enroot
 # or
-bash setup_singularity.sh $CONTAINER_CACHEDIR # For Singularity
+bash training/nemo/setup/setup_singularity.sh $CONTAINER_CACHEDIR # For Singularity
 ```
 
 ### Issue 3: Container import fails / network errors
@@ -418,8 +419,8 @@ nvidia-smi
 
 **Solution**:
 ```bash
-chmod +x run_in_enroot.sh setup_enroot.sh          # For Enroot
-chmod +x run_in_singularity.sh setup_singularity.sh # For Singularity
+chmod +x run_in_enroot.sh training/nemo/setup/setup_enroot.sh          # For Enroot
+chmod +x run_in_singularity.sh training/nemo/setup/setup_singularity.sh # For Singularity
 ```
 
 ## Sharing This Code
@@ -449,10 +450,10 @@ When you receive this code, follow the setup steps:
 2. **Install container** (see [Step 2](#step-2-install-container)):
    ```bash
    # For Enroot (recommended)
-   bash setup_enroot.sh
+   bash training/nemo/setup/setup_enroot.sh
    
    # For Singularity
-   bash setup_singularity.sh $CONTAINER_CACHEDIR
+   bash training/nemo/setup/setup_singularity.sh $CONTAINER_CACHEDIR
    ```
 
 3. **Verify installation** (see [Step 3](#step-3-verify-installation)):
@@ -467,9 +468,9 @@ When you receive this code, follow the setup steps:
 4. **Submit training job**:
    ```bash
    source .env
-   qsub jobs/submit_cpt_enroot.sh      # For Enroot
+   qsub jobs/run_cpt.pbs      # For Enroot
    # or
-   qsub jobs/submit_cpt_singularity.sh # For Singularity
+   qsub jobs/run_cpt.pbs # For Singularity
    ```
 
 **Git Security Checklist** (before `git push`):
@@ -506,3 +507,263 @@ When you receive this code, follow the setup steps:
 - **Format**: 
   - Enroot: `.sqsh` (squashfs image)
   - Singularity: `.sif` (Singularity Image Format)
+
+---
+
+# Part 2: Data Preprocessing
+
+## TL;DR - The Format Issue
+
+**Question:** What format does NeMo expect?
+
+**Answer:** NeMo's `PreTrainingDataModule` expects **Megatron binary format**, not raw JSONL or HuggingFace Arrow format.
+
+### Format Comparison
+
+| Format | Files | Used By | Description |
+|--------|-------|---------|-------------|
+| **JSONL** | `.jsonl` | Raw data | One JSON object per line: `{"text": "..."}` |
+| **HuggingFace Arrow** | `data-*.arrow`, `dataset_info.json` | HuggingFace | Columnar format saved by `dataset.save_to_disk()` |
+| **Megatron Binary** | `.bin`, `.idx` | NeMo/Megatron | Binary tokenized data + index |
+
+### Why Megatron Binary?
+
+NeMo's `PreTrainingDataModule` uses Megatron-Core's data pipeline which expects:
+- `<prefix>_text_document.bin` - Binary file with tokenized text
+- `<prefix>_text_document.idx` - Index file for fast random access
+
+Benefits:
+- ✅ Pre-tokenized (no tokenization during training)
+- ✅ Memory-mapped (can handle datasets larger than RAM)
+- ✅ Fast random access for distributed training
+- ✅ Optimized for multi-GPU/multi-node training
+
+## Preprocessing Pipeline
+
+### Step 1: Split Large JSONL (Optional but Recommended)
+
+For large datasets (like 7.4GB seapile-v2.jsonl), split into chunks for parallel processing:
+
+```bash
+python training/nemo/data/split_jsonl.py \
+    --input data/corpora/seapile-v2.jsonl \
+    --output-dir data/chunks \
+    --num-chunks 20
+```
+
+This creates:
+```
+data/chunks/
+├── chunk_0001.jsonl  (~400MB)
+├── chunk_0002.jsonl  (~400MB)
+├── ...
+└── chunk_0020.jsonl  (~400MB)
+```
+
+### Step 2: Preprocess to Megatron Format
+
+**IMPORTANT:** Preprocessing must run **inside the NeMo container** where Megatron tools are available.
+
+#### Option A: Test Single Chunk First
+
+Test preprocessing on one chunk before running all 20:
+
+```bash
+qsub jobs/preprocess_test_chunk1.pbs
+```
+
+This processes only `chunk_0001.jsonl` - perfect for testing!
+
+#### Option B: Parallel Processing (FAST! 🚀)
+
+Process all 20 chunks in parallel using PBS array jobs:
+
+```bash
+# First, update the array range in the script
+# Edit jobs/preprocess_data_parallel.pbs line 4:
+#PBS -J 1-20   # Change from 1-1 to 1-20
+
+# Then submit:
+qsub jobs/preprocess_data_parallel.pbs
+```
+
+Each task processes one chunk independently - **20x faster** than sequential!
+
+Creates:
+```
+data/processed/
+├── chunk_0001_text_document.bin
+├── chunk_0001_text_document.idx
+├── chunk_0002_text_document.bin
+├── chunk_0002_text_document.idx
+├── ...
+└── chunk_0020_text_document.idx
+```
+
+#### Option C: Single File
+
+```bash
+qsub jobs/preprocess_data.pbs
+```
+
+This uses the default configuration:
+- Input: `/workspace/data/corpora/seapile-v2.jsonl`
+- Output: `/workspace/data/processed/seapile-v2_text_document.{bin,idx}`
+- Tokenizer: `google/gemma-3-1b-pt`
+
+### Step 3: Use in Training
+
+Point to the prefix (without `_text_document` suffix):
+
+```bash
+# Single dataset
+python training/nemo/run_cpt.py \
+    --data-path /workspace/data/processed/seapile-v2
+
+# Multiple chunks (blended equally)
+python training/nemo/run_cpt.py \
+    --data-path /workspace/data/processed/chunk_0001,/workspace/data/processed/chunk_0002
+```
+
+## The Preprocessing Script
+
+Located at: `training/nemo/data/preprocess_data.py`
+
+### What it does:
+
+1. **Finds Megatron tool** at `/opt/megatron-lm/tools/preprocess_data.py` (inside container)
+2. **Loads your tokenizer** (e.g., google/gemma-3-1b-pt from HuggingFace)
+3. **Reads JSONL** line by line
+4. **Tokenizes each document** with parallel workers
+5. **Writes binary format** that Megatron can memory-map
+6. **Creates index** for fast random access
+
+### Key Arguments:
+
+- `--input`: Path to JSONL file (container path)
+- `--output-prefix`: Where to save (without `_text_document` suffix)
+- `--tokenizer-model`: HuggingFace tokenizer name
+- `--text-key`: JSON key containing text (default: "text")
+- `--workers`: Parallel workers for tokenization (default: 64)
+
+## Monitoring Progress
+
+### Check job status:
+```bash
+qstat              # All jobs
+qstat -t           # Array jobs with task IDs
+qstat -f 133256    # Detailed info for specific job
+```
+
+### Check logs:
+```bash
+# For single file preprocessing:
+tail -f /scratch_aisg/SPEC-SF-AISG/railey/logs/<JOB_ID>.OU
+
+# For array job - check specific chunk:
+cat /scratch_aisg/SPEC-SF-AISG/railey/logs/preprocessing/<JOB_ID>/chunk_1/preprocessing.log
+
+# Check for errors across all chunks:
+grep -i error /scratch_aisg/SPEC-SF-AISG/railey/logs/preprocessing/<JOB_ID>/*/preprocessing.log
+```
+
+### Verify outputs:
+```bash
+ls -lh data/processed/
+```
+
+You should see `.bin` and `.idx` files for each chunk.
+
+## Troubleshooting
+
+### Container not found
+
+**Symptom:** `enroot list` doesn't show `nemo_framework`
+
+**Cause:** Enroot environment variables not set
+
+**Solution:** 
+```bash
+source .env           # Load Enroot paths
+enroot list           # Should show nemo_framework
+```
+
+Or run setup:
+```bash
+bash training/nemo/setup/setup_enroot.sh
+```
+
+### Invalid tokenizer type
+
+**Symptom:** `error: argument --tokenizer-type: invalid choice: 'PretrainedFromHF'`
+
+**Cause:** Wrong tokenizer type for Megatron script
+
+**Solution:** Use `HuggingFaceTokenizer` with `--tokenizer-model` (already fixed in scripts)
+
+### Missing preprocessing script
+
+**Symptom:** `✗ Error: NeMo preprocessing script not found`
+
+**Cause:** Script not running inside container
+
+**Solution:** PBS jobs handle this automatically - don't run preprocessing on login node!
+
+### Text key not found
+
+**Symptom:** `KeyError: 'text'`
+
+**Cause:** Your JSONL uses a different key
+
+**Solution:** Set `JSON_KEY` environment variable:
+```bash
+qsub -v JSON_KEY=content jobs/preprocess_data.pbs
+```
+
+## Complete Preprocessing Workflow
+
+```bash
+# 1. Set up container (one-time)
+bash training/nemo/setup/setup_enroot.sh
+
+# 2. Split large JSONL into chunks
+python training/nemo/data/split_jsonl.py \
+    --input data/corpora/seapile-v2.jsonl \
+    --output-dir data/chunks \
+    --num-chunks 20
+
+# 3. Test with one chunk first
+qsub jobs/preprocess_test_chunk1.pbs
+
+# 4. Check test results
+qstat
+tail /scratch_aisg/SPEC-SF-AISG/railey/logs/<JOB_ID>.OU
+ls -lh data/processed/chunk_0001_text_document.*
+
+# 5. If test succeeds, process all chunks in parallel
+# Edit jobs/preprocess_data_parallel.pbs: change #PBS -J 1-1 to #PBS -J 1-20
+qsub jobs/preprocess_data_parallel.pbs
+
+# 6. Monitor progress
+qstat -t
+
+# 7. Verify all outputs
+ls -lh data/processed/*.bin | wc -l   # Should show 20
+
+# 8. Run training test
+qsub jobs/run_cpt_test.pbs
+
+# 9. If test works, run full training
+qsub jobs/run_cpt.pbs
+```
+
+## Summary
+
+- ✅ **NeMo needs Megatron binary format** (`.bin` + `.idx`)
+- ✅ **NOT raw JSONL or HuggingFace Arrow format**
+- ✅ **Must run inside container** (PBS jobs handle this)
+- ✅ **Use parallel processing** for speed (20x faster with array jobs)
+- ✅ **Point training to prefix** (without `_text_document` suffix)
+- ✅ **Test first** with single chunk before processing all data
+
+**The format is complex, but it's optimized for large-scale distributed training!** 🚀
