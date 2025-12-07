@@ -88,6 +88,54 @@ We compared three approaches on 100 morpheme-annotated Filipino words:
 
 **Note**: Oracle uses ground-truth morpheme boundaries. Real Patok uses 92 Filipino affixes + reduplication detection.
 
+## Getting Started
+
+### Prerequisites
+- NVIDIA GPU system with **Enroot** (or Singularity/Apptainer as alternative)
+- 20GB free disk space on `/scratch`
+- Weights & Biases account ([free signup](https://wandb.ai))
+
+### Quick Setup (Enroot - Recommended)
+
+```bash
+# 1. Configure environment
+cp .env.example .env
+nano .env  # Add your WANDB_API_KEY, HF_TOKEN, ENROOT_PATH, BIND_MOUNTS
+source .env
+
+# 2. Setup NeMo Framework container (~15 minutes)
+bash setup_enroot.sh
+
+# 3. Verify installation
+./run_in_enroot.sh python -c "import torch, nemo; print(f'PyTorch {torch.__version__}, NeMo {nemo.__version__}')"
+
+# 4. Submit training job
+source .env
+qsub jobs/submit_cpt_enroot.sh
+```
+
+### Alternative Setup (Singularity/Apptainer)
+
+```bash
+# 2. Pull container with Singularity
+bash setup_singularity.sh $CONTAINER_CACHEDIR
+
+# 3. Verify with Singularity
+./run_in_singularity.sh python -c "import torch, nemo; print(f'PyTorch {torch.__version__}, NeMo {nemo.__version__}')"
+
+# 4. Submit with Singularity
+qsub jobs/submit_cpt_singularity.sh
+```
+
+### Documentation
+- **[SETUP.md](SETUP.md)** - Detailed installation, configuration, troubleshooting, and sharing guidelines
+- **`.env.example`** - Environment variable template with explanations
+
+### Need Help?
+- Check [Common Issues](SETUP.md#common-issues) in SETUP.md
+- Review [Configuration](SETUP.md#configuration) for environment variables
+- See [Sharing This Code](SETUP.md#sharing-this-code) before collaborating
+
 ## Repository Structure
 
 ```
