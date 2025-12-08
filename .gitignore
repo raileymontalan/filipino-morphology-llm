@@ -79,8 +79,9 @@ temp/
 *.tmp
 
 # Pre-training corpora
-data/corpora/*.jsonl
 data/chunks/*
+data/corpora/*.jsonl
+data/memmaps/*
 data/processed/*
 
 # Environment variables and secrets
