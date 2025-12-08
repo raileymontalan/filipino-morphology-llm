@@ -1,411 +1,227 @@
 # Filipino Morphology LLM
 
-Research project testing whether **affix-aware continued pretraining** improves language model performance on Filipino morphological tasks.
-
-> **📖 New to this project?** Read **[docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md)** for the complete research design, experimental setup, and expected outcomes.
+Research project testing whether **morpheme-aware tokenization** improves language model performance on Filipino morphological tasks.
 
 ## Research Question
 
 **Can tokenization that preserves morpheme boundaries improve LLM understanding of agglutinative morphology?**
 
-We compare three approaches:
+We compare three tokenization approaches:
 1. **Baseline**: Standard BPE (GPT-2, Gemma)
-2. **StochasTok**: Stochastic token expansion [(Sims et al. 2025)](https://github.com/anyasims/stochastok)
-3. **Patok** (new): Affix-aware expansion with Filipino linguistic guidance
+2. **Stochastok**: Stochastic token expansion (~10%)
+3. **Patok**: Affix-aware expand-contract (30%+30%)
 
-**Models**: GPT-2 (117M) and Gemma 3 1B (1B parameters)  
-**Evaluation**: 13,023 morphological tasks across multiple benchmarks
+**Models:** Gemma 3 1B (1B parameters)  
+**Data:** SEA-PILE v2 Filipino corpus (7.4GB)  
+**Evaluation:** 15,023 morphological tasks
 
 ---
 
 ## Quick Start
 
-### Generate Benchmarks
-```bash
-python scripts/generate_all_benchmarks.py
-```
-
-### Evaluate a Model
-```bash
-python scripts/run_benchmark_evaluation.py --models gpt2 --benchmarks pacute
-```
-
-📖 **See [scripts/EVALUATION_README.md](scripts/EVALUATION_README.md) for detailed evaluation guide**
-
----
-
-## What This Repository Contains
-
-### Evaluation Framework
-- **PACUTE benchmark**: 11,225 tasks (5,845 MCQ + 5,380 Gen) testing morphological understanding
-  - Affixation (280 tasks): Identify and apply Filipino affixes
-  - Composition (3,905 tasks): Character counting, diacritics, word formation
-  - Manipulation (5,120 tasks): Character operations (insert, delete, swap, etc.)
-  - Syllabification (1,280 tasks): Syllable counting, stress, reduplication
-
-- **Hierarchical tasks**: 1,798 tasks (1,198 MCQ + 600 Gen) across 6 diagnostic levels
-  - Level 0: Character recognition
-  - Level 1: Character manipulation
-  - Level 2: Morpheme decomposition
-  - Level 3: Morpheme manipulation
-  - Level 4: Morpheme composition
-  - Level 5: Complex morphological reasoning
-
-- **LangGame**: 3,000 tasks (2,000 train + 1,000 val) testing subword understanding
-
-- **Multi-Digit Addition**: 3,000 tasks (2,000 train + 1,000 val) testing numerical reasoning
-
-### Data
-- **Morpheme annotations**: 472 Filipino words with boundary annotations
-- **Affix inventory**: 92 Filipino affixes (prefixes, infixes, suffixes, circumfixes)
-- **Syllabified words**: 16,828 words with syllable boundaries
-- **Word frequencies**: 118,801 entries for frequency-aware sampling
-
-### Tokenization
-- **Patok**: Morphology-aware tokenization with Aho-Corasick affix detection
-  - Contract-expand with 95% affix preservation
-  - Re-expands by splitting off known affixes ("maganda" → "ma" + "ganda")
-  - Handles reduplication ("gaganda" → "ga" + "ganda")
-  - Uses 92 Filipino affixes (data/affixes/filipino_affixes.txt)
-  - `src/tokenization/patok_morphology.py`
-- **StochasTok**: Stochastic token expansion baseline
-- **Affix decomposition**: Handles out-of-vocabulary affixes
-
-### Analysis Tools
-- **MorphScore**: Measures alignment between token and morpheme boundaries
-- **Boundary F1**: Precision/recall of morpheme boundary detection
-- **Fragmentation**: Tokens per morpheme
-- **Affix coverage**: Vocabulary analysis across tokenizers
-
-## Baseline Results
-
-We analyzed standard BPE tokenization (GPT-2) on 100 morpheme-annotated Filipino words:
-
-| Metric | Value | Interpretation |
-|--------|-------|----------------|
-| MorphScore | 0.235 | Only 23.5% of morpheme boundaries preserved |
-| Boundary F1 | 0.165 | Poor precision and recall |
-| Fragmentation | 1.574 | ~1.6 tokens per morpheme |
-
-**Finding**: Standard BPE systematically destroys morpheme boundaries.
-
-Example:
-```
-Word: matulog (ma- + tulog = "will sleep")
-Morphemes: ma | tulog
-GPT-2:     mat | ul | og
-→ Prefix boundary destroyed
-```
-
-### Affix Vocabulary Coverage
-
-| Tokenizer | Affixes in Vocab | Coverage |
-|-----------|------------------|----------|
-| GPT-2 | 41/92 | 44.6% |
-| cl100k_base | 42/92 | 45.7% |
-
-**Finding**: ~55% of Filipino affixes require decomposition into sub-tokens.
-
-### Tokenization Comparison
-
-We compared three approaches on 100 morpheme-annotated Filipino words:
-
-| Metric | GPT-2 Baseline | Real Patok | Oracle | Patok Improvement |
-|--------|----------------|------------|--------|-------------------|
-| MorphScore | 0.235 | 0.657 | 0.990 | +0.422 (+179%) |
-| Boundary F1 | 0.165 | 0.365 | 0.643 | +0.199 (+121%) |
-| Fragmentation | 1.574 | 1.906 | 1.658 | +0.332 |
-
-**Findings**:
-- Real Patok substantially improves morpheme boundary alignment (+179% MorphScore)
-- Captures 56% of oracle's theoretical maximum improvement
-- Higher fragmentation expected (splitting at morpheme boundaries)
-- Oracle represents upper bound with known boundaries
-
-**Note**: Oracle uses ground-truth morpheme boundaries. Real Patok uses 92 Filipino affixes + reduplication detection.
-
-## Getting Started
-
-### Prerequisites
-- NVIDIA GPU cluster with **PBS job scheduler** and **Enroot** container runtime
-- 20GB free disk space for container and caches
-- Weights & Biases account ([free signup](https://wandb.ai))
-- HuggingFace account for model downloads
-
-### Quick Setup (PBS + Enroot)
+### 1. Setup Environment
 
 ```bash
-# 1. Configure environment
+# Configure
 cp .env.example .env
-nano .env  # Add your WANDB_API_KEY, HF_TOKEN, ENROOT paths, BIND_MOUNTS
+nano .env  # Add: HF_TOKEN, WANDB_API_KEY, ENROOT_PATH, etc.
 source .env
 
-# 2. Setup NeMo Framework container (~15 minutes, one-time setup)
+# Install container (~15 minutes)
 bash training/nemo/setup/setup_enroot.sh
 
-# 3. Verify installation
-enroot list  # Should show: nemo_framework
+# Verify
+enroot list | grep nemo_framework
 ```
 
-### Data Preprocessing (Required Before Training!)
+See **[SETUP.md](SETUP.md)** for detailed setup instructions.
 
-NeMo requires data in **Megatron binary format** (`.bin` + `.idx` files), not raw JSONL.
+### 2. Preprocess Data
 
 ```bash
-# Option 1: Test with one chunk first (recommended)
+# Test first
 qsub jobs/preprocess_test_chunk1.pbs
 
-# Option 2: Preprocess full dataset
-qsub jobs/preprocess_data.pbs
-
-# Option 3: Parallel processing (20x faster!)
-# Edit jobs/preprocess_data_parallel.pbs: change #PBS -J 1-1 to #PBS -J 1-20
-qsub jobs/preprocess_data_parallel.pbs
-
-# Verify outputs
-ls -lh data/processed/*.bin
+# Full preprocessing (parallel, faster)
+qsub -J 1-20 jobs/preprocess_data_parallel.pbs
 ```
 
-See **[docs/SETUP.md](docs/SETUP.md)** for detailed preprocessing guide.
+See **[training/nemo/data/DATA_PREPROCESSING.md](training/nemo/data/DATA_PREPROCESSING.md)** for complete preprocessing guide.
 
-### Training
+### 3. Train Model
 
 ```bash
-# 1. Test training (1 GPU, 10 steps, ~5 minutes)
+# Quick test (10 steps)
 qsub jobs/run_cpt_test.pbs
 
-# 2. Check test results
-qstat
-tail -f /scratch_aisg/SPEC-SF-AISG/railey/logs/<JOB_ID>.OU
-
-# 3. If test succeeds, run full training (multi-GPU)
+# Full training
 qsub jobs/run_cpt.pbs
 ```
 
-### Documentation
-- **[docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md)** - 📖 **START HERE**: Research design & experimental setup
-- **[docs/SETUP.md](docs/SETUP.md)** - Environment setup & data preprocessing
-- **[docs/USAGE.md](docs/USAGE.md)** - Training workflow & PBS job reference
-- **[docs/AFFIX_PROCESSING.md](docs/AFFIX_PROCESSING.md)** - Patok implementation details
-- **[docs/HIERARCHICAL_TASKS.md](docs/HIERARCHICAL_TASKS.md)** - Hierarchical benchmark design
-- **[jobs/QUICK_REFERENCE_PBS.sh](jobs/QUICK_REFERENCE_PBS.sh)** - PBS commands cheatsheet
-- **`.env.example`** - Environment variable template
+See **[docs/TRAINING.md](docs/TRAINING.md)** for complete training guide.
 
-### Need Help?
-- **Research context**: [docs/RESEARCH_OVERVIEW.md](docs/RESEARCH_OVERVIEW.md)
-- **Setup issues**: [docs/SETUP.md](docs/SETUP.md)
-- **Training issues**: [docs/USAGE.md](docs/USAGE.md)
+### 4. Evaluate
+
+```bash
+# Generate benchmarks
+python scripts/generate_evaluation_datasets.py
+
+# Evaluate model
+python scripts/run_evaluation.py --models gpt2 --benchmarks pacute
+```
+
+See **[docs/EVALUATION.md](docs/EVALUATION.md)** for complete evaluation guide.
+
+---
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| **[SETUP.md](SETUP.md)** | Environment setup and installation |
+| **[docs/RESEARCH.md](docs/RESEARCH.md)** | Research overview, methods, and experimental design |
+| **[docs/TRAINING.md](docs/TRAINING.md)** | Training workflows and configurations |
+| **[docs/EVALUATION.md](docs/EVALUATION.md)** | Benchmark generation and model evaluation |
+| **[training/nemo/data/DATA_PREPROCESSING.md](training/nemo/data/DATA_PREPROCESSING.md)** | Data preprocessing guide |
+
+---
+
+## Evaluation Benchmarks
+
+### PACUTE (11,225 tasks)
+**P**ilipino **A**ffix and **C**haracter-Level **U**nderstanding of **T**okens **E**valuation
+
+- **Affixation** (280 tasks): Filipino affix identification and application
+- **Composition** (3,905 tasks): Character counting, diacritics, word formation
+- **Manipulation** (5,120 tasks): Character operations (insert, delete, swap)
+- **Syllabification** (1,280 tasks): Syllable counting, stress, reduplication
+
+### Hierarchical (1,798 tasks)
+Diagnostic tasks across 6 compositional levels to identify where models fail:
+- Level 0: Character Recognition
+- Level 1: Character Manipulation
+- Level 2: Morpheme Decomposition ⚠️ **Critical bottleneck**
+- Level 3: Morpheme Manipulation
+- Level 4: Morpheme Composition
+- Level 5: Complex Reasoning
+
+### Additional Benchmarks
+- **LangGame** (3,000 tasks): Subword understanding
+- **Math** (3,000 tasks): Multi-digit addition
+
+---
 
 ## Repository Structure
 
 ```
 filipino-morphology-llm/
-├── src/                        # Core library code
-│   ├── tokenization/           # Patok, StochasTok, affix decomposition
-│   ├── evaluation/             # PACUTE + hierarchical tasks
-│   ├── analysis/               # Morphological metrics
-│   ├── models/                 # Transformer architecture
-│   ├── training/               # Training infrastructure
-│   └── data_processing/        # Dataset preprocessing
-├── scripts/                    # Utilities & tools
-│   ├── setup/                  # Environment setup scripts
-│   ├── data/                   # Data preprocessing
-│   ├── training/               # Training entrypoints
-│   └── analysis/               # Analysis & evaluation
-├── data/
-│   ├── affixes/                # Filipino affix list
-│   ├── benchmarks/             # 2,236 evaluation items
-│   ├── corpora/                # Annotations, syllables, frequencies
-│   ├── chunks/                 # Split JSONL files for preprocessing
-│   └── processed/              # Megatron binary format (.bin + .idx)
-├── docs/                       # Documentation
-│   ├── SETUP.md                # Environment & preprocessing
-│   └── USAGE.md                # Training & job submission
-├── jobs/                       # PBS job scripts
-├── experiments/                # Training and evaluation scripts
-└── configs/                    # Training configurations
+├── README.md                    # This file
+├── SETUP.md                     # Setup guide
+├── docs/                        # Documentation
+│   ├── RESEARCH.md             # Research overview
+│   ├── TRAINING.md             # Training guide
+│   └── EVALUATION.md           # Evaluation guide
+├── data/                        # Data files
+│   ├── benchmarks/             # Evaluation benchmarks
+│   ├── chunks/                 # Preprocessed chunks
+│   └── processed/              # Binary format data
+├── src/                         # Source code
+│   ├── evaluation/             # Benchmark generators & evaluators
+│   └── tokenization/           # Tokenization processors
+│       ├── stochastok_processor.py
+│       └── patok_processor.py
+├── training/                    # Training code
+│   ├── nemo/                   # NeMo CPT (current focus)
+│   │   ├── run_cpt.py          # Main training script
+│   │   ├── setup/              # Setup scripts
+│   │   └── data/               # Data preprocessing
+│   │       └── DATA_PREPROCESSING.md
+│   └── stochastok/             # Small-scale training (GPT-2)
+├── jobs/                        # PBS job scripts
+│   ├── run_cpt.pbs             # Training job
+│   ├── preprocess_data_parallel.pbs
+│   └── preprocess_test_chunk1.pbs
+└── scripts/                     # Utility scripts
+    ├── generate_evaluation_datasets.py  # Generate benchmarks
+    ├── run_evaluation.py           # Evaluate models
+    ├── run_evaluation_batch.sh     # Batch evaluation
+    └── evaluate_downstream.py      # Downstream tasks
 ```
 
-## Installation
+---
 
-```bash
-git clone https://github.com/DavidDemitriAfrica/filipino-morphology-llm.git
-cd filipino-morphology-llm
-pip install -r requirements.txt
+## Key Features
+
+### Tokenization Processors
+
+**Stochastok** (`src/tokenization/stochastok_processor.py`):
+```python
+processor = StochastokProcessor(tokenizer, expand_prop=0.1)
+expanded_ids = processor.expand(token_ids)
 ```
 
-## Usage
+**Patok** (`src/tokenization/patok_processor.py`):
+```python
+processor = PatokProcessor(tokenizer, 
+                          expand_prop=0.3, 
+                          contract_prop=0.3,
+                          affix_preference=0.7)
+processed_ids = processor.affix_aware_expand_contract(token_ids)
+```
 
-### Morphology-Aware Tokenization
+### Evaluation Framework
 
 ```python
-import tiktoken
-from src.tokenization.patok_morphology import MorphologyAwarePatokProcessor
+# Generate all benchmarks
+from scripts.generate_evaluation_datasets import main
+main()
 
-tokenizer = tiktoken.get_encoding("gpt2")
-patok = MorphologyAwarePatokProcessor(tokenizer)
-
-text = "Nagkukumahog na pinadalhan ng magagandang parlorista"
-token_ids = patok.process(text)
+# Evaluate model
+from scripts.run_evaluation import evaluate_model
+results = evaluate_model(model_name="gpt2", benchmarks=["pacute"])
 ```
 
-### Analyze Tokenizer
+---
 
-Check affix coverage:
-```bash
-python scripts/analyze_affix_coverage.py \
-    --compare gpt2 cl100k_base \
-    --affixes-file data/affixes/filipino_affixes.txt
-```
+## Expected Results
 
-### Generate Hierarchical Tasks
+| Method | PACUTE Affixation | Hierarchical Level 2 | Improvement |
+|--------|-------------------|---------------------|-------------|
+| **Baseline** | 40-50% | 30-40% | - |
+| **Stochastok** | 50-65% | 45-55% | +10-15% |
+| **Patok** | 60-70% | 55-70% | +20-30% |
 
-```bash
-python scripts/generate_hierarchical_benchmark.py
-```
+Affix-aware tokenization (Patok) is expected to show the largest improvements on morphological understanding tasks.
 
-### Run Baseline Analysis
-
-```bash
-python scripts/analyze_tokenization_simple.py
-```
-
-### Compare Tokenizers
-
-```bash
-python scripts/compare_tokenizers.py
-```
-
-## What Still Needs Doing
-
-1. **Train with Patok**: Apply morphology-aware tokenization during pre-training
-2. **Evaluate on tasks**: Test on 2,236 evaluation items
-3. **Measure downstream**: Compare Patok vs baseline on hierarchical tasks
-4. **Get Filipino corpus**: Need training data for pre-training
-
-## Key Files
-
-### Data
-- `data/benchmarks/hierarchical_mcq.jsonl` - 598 hierarchical MCQ tasks
-- `data/benchmarks/hierarchical_gen.jsonl` - 598 hierarchical generative tasks
-- `data/benchmarks/mcq_*.jsonl` - 1,040 PACUTE tasks
-- `data/corpora/affix_annotations.jsonl` - 472 morpheme-annotated words
-
-### Scripts
-- `scripts/create_affix_annotations.py` - Generate morpheme annotations
-- `scripts/generate_hierarchical_benchmark.py` - Create hierarchical tasks
-- `scripts/analyze_tokenization_simple.py` - Baseline BPE analysis
-- `scripts/compare_tokenizers.py` - Oracle comparison
-- `scripts/analyze_affix_coverage.py` - Vocabulary coverage
-
-### Analysis
-- `results/tokenization_baseline.json` - GPT-2 baseline metrics
-- `results/tokenization_comparison.json` - GPT-2 vs Oracle vs Real Patok
-- `data/vocabularies/affix_analysis_*.json` - Coverage analyses
-
-## Attribution
-
-This repository builds upon two existing repositories with proper attribution:
-
-### StochasTok (MIT License)
-- **Source**: https://github.com/anyasims/stochastok
-- **Fork**: https://github.com/raileymontalan/stochastok
-- **Components**: 
-  - Tokenization (`src/tokenization/patok_processor.py`, `stochastok_processor.py`)
-  - Model architecture (`src/models/`)
-  - Training infrastructure (`src/training/`)
-  - Data processing (`src/data_processing/`)
-  - Evaluation framework (`src/evaluation/benchmarks/`)
-- **Paper**: Sims et al. (2025). "Stochastic Tokenization Improves Subword Understanding"
-
-### PACUTE (CC0 1.0 Universal)
-- **Source**: Pilipino Affix and Character-Level Understanding of Tokens Evaluation
-- **Components**:
-  - Task generation (`src/evaluation/affixation.py`, `composition.py`, `manipulation.py`, `syllabification.py`)
-  - Morphological operations (`src/evaluation/string_operations.py`, `syllabification_operations.py`)
-  - Evaluation data (`data/benchmarks/*.jsonl` - 1,040 items)
-  - Linguistic data (`data/corpora/pacute_data/` - syllables, frequencies)
-
-### Key Files from Source Repositories
-
-**From StochasTok:**
-- Tokenization: `patok_processor.py`, `stochastok_processor.py`
-- Models: Complete transformer implementation in `src/models/`
-- Training: Full training framework in `src/training/`
-- Experiments: `experiments/train.py`, `experiments/eval.py`
-- Configs: `configs/pretraining.yaml`, `configs/instruction_tuning.yaml`
-- Data: `data/affixes/filipino_affixes.txt` (93 affixes)
-
-**From PACUTE:**
-- Tasks: Affixation, composition, manipulation, syllabification
-- Data: `data/benchmarks/*.jsonl` (1,040 evaluation items)
-- Operations: String and syllabification primitives
-- Corpora: 16,828 syllabified words, 2M+ word frequencies
-
-All original functionality has been preserved:
-- ✅ All Python files from both repositories
-- ✅ All configuration files
-- ✅ All data files
-- ✅ All tests and notebooks
-- ✅ All documentation
-
-For detailed component attribution, see the full file listing in the repository structure above.
-
-## New Contributions
-
-- Morphology-aware Patok with Aho-Corasick affix detection
-- 472 morpheme-annotated Filipino words
-- 1,196 hierarchical diagnostic tasks (6 levels)
-- Baseline BPE analysis (MorphScore = 0.235)
-- Affix coverage analysis (44.6% vocabulary coverage)
-- Morphology-aware tokenization comparison (Patok: +179% MorphScore)
+---
 
 ## Citation
 
-If you use this repository, please cite:
+If you use this code or benchmarks, please cite:
 
 ```bibtex
-@misc{africa2025filipino,
-  title={Filipino Morphology-Aware Language Model},
-  author={Africa, David Demitri and Montalan, Jann Railey and Gamboa, Lance and
-          Flores, Richell Isaiah and Layacan, Jimson Paulo and
-          Susanto, Yosephine and Ngui, Jian Gang},
+@misc{filipino-morphology-llm,
+  title={Affix-Aware Tokenization for Filipino Morphological Understanding},
+  author={Your Name},
   year={2025},
-  note={Author order to be determined}
+  url={https://github.com/yourusername/filipino-morphology-llm}
 }
 ```
 
-**Original Sources**:
-
-**StochasTok**:
-```bibtex
-@misc{sims2025stochastokimprovingfinegrainedsubword,
-  title={StochasTok: Improving Fine-Grained Subword Understanding in LLMs},
-  author={Anya Sims and Thom Foster and Klara Kaleb and Tuan-Duy H. Nguyen and
-          Joseph Lee and Jakob N. Foerster and Yee Whye Teh and Cong Lu},
-  year={2025},
-  eprint={2506.01687},
-  archivePrefix={arXiv},
-  primaryClass={cs.CL},
-  url={https://arxiv.org/abs/2506.01687}
-}
-```
-
-**PACUTE** (same as main citation):
-```bibtex
-@misc{africa2025filipino,
-  title={Filipino Morphology-Aware Language Model},
-  author={Africa, David Demitri and Montalan, Jann Railey and Gamboa, Lance and
-          Flores, Richell Isaiah and Layacan, Jimson Paulo and
-          Susanto, Yosephine and Ngui, Jian Gang},
-  year={2025},
-  note={Author order to be determined}
-}
-```
+---
 
 ## License
 
-Components have different licenses - see [LICENSE](LICENSE) for details:
-- StochasTok components: MIT License
-- PACUTE components: CC0 1.0 Universal
-- New contributions: MIT License
+MIT License - See [LICENSE](LICENSE) for details.
+
+---
+
+## Contact
+
+For questions or collaboration:
+- Create an issue on GitHub
+- Email: your.email@example.com
+
+---
+
+**Ready to get started?** See **[SETUP.md](SETUP.md)** for installation instructions.

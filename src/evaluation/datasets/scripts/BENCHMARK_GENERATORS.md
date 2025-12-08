@@ -85,7 +85,7 @@ To generate all benchmarks at once (where possible):
 
 ```bash
 cd /path/to/filipino-morphology-llm
-python src/evaluation/benchmark_generation/generate_all_benchmarks.py
+python scripts/generate_evaluation_datasets.py
 ```
 
 This master script will:
@@ -178,7 +178,7 @@ paths = jsonl_to_memmap(
 
 To use these benchmarks for evaluation, see:
 - `src/evaluation/benchmarks/` - Evaluation loaders
-- `scripts/run_benchmark_evaluation.py` - Evaluation runner
+- `scripts/run_evaluation.py` - Evaluation runner
 
 ## Migration Notes
 
