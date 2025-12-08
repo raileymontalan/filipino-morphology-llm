@@ -61,7 +61,7 @@ def parse_args():
         type=str,
         nargs="+",
         default=["/workspace/data/processed/seapile-v2"],
-        help="Path prefix(es) for preprocessed Megatron binary files (without _text_document suffix). Can specify multiple paths for parallel chunks.",
+        help="Path prefix(es) for preprocessed Megatron binary files (without .bin/.idx extension). Can specify multiple paths for parallel chunks.",
     )
     parser.add_argument(
         "--seq-length",
@@ -132,8 +132,8 @@ def parse_args():
     parser.add_argument(
         "--resume-from",
         type=str,
-        default="google/gemma-3-1b-pt",
-        help="HuggingFace model ID to start from",
+        default=None,
+        help="HuggingFace model ID to resume from (optional, trains from scratch if not provided)",
     )
     
     # Logging arguments
@@ -205,7 +205,7 @@ def main():
     
     # Verify preprocessed data exists (Megatron binary format)
     # The data path should be a prefix like "data/processed/seapile-v2"
-    # which will have corresponding files: seapile-v2_text_document.bin and .idx
+    # which will have corresponding files: seapile-v2.bin and .idx
     # Support multiple paths for parallel preprocessing chunks
     data_prefixes = args.data_path if isinstance(args.data_path, list) else [args.data_path]
     
@@ -214,8 +214,8 @@ def main():
     verified_paths = []
     
     for data_prefix in data_prefixes:
-        bin_path = Path(f"{data_prefix}_text_document.bin")
-        idx_path = Path(f"{data_prefix}_text_document.idx")
+        bin_path = Path(f"{data_prefix}.bin")
+        idx_path = Path(f"{data_prefix}.idx")
         
         if not bin_path.exists() or not idx_path.exists():
             print(f"✗ Error: Preprocessed Megatron binary files not found for {data_prefix}")
@@ -247,7 +247,7 @@ def main():
     # Configure the data module
     print(f"Configuring data module with {len(verified_paths)} data path(s)...")
     data = PreTrainingDataModule(
-        paths=verified_paths,  # Use the preprocessed data prefix(es) (without _text_document)
+        paths=verified_paths,  # Use the preprocessed data prefix(es) (without .bin/.idx)
         seq_length=args.seq_length,
         global_batch_size=args.global_batch_size,
         micro_batch_size=args.micro_batch_size,
@@ -302,30 +302,37 @@ def main():
     )
     
     # Configure model
-    print(f"Preparing model: {args.resume_from}")
     model = llm.Gemma3Model(
         config=llm.Gemma3Config1B(seq_length=args.seq_length)
     )
     
     # Train the model
     print("\n" + "=" * 80)
-    print("Starting 100-Step Continued Pretraining Run")
+    print("Starting Continued Pretraining Run")
     print("=" * 80)
-    print(f"HuggingFace checkpoint: {args.resume_from}")
+    if args.resume_from:
+        print(f"Resume from: {args.resume_from}")
+    else:
+        print("Training from scratch (no checkpoint)")
     print(f"Training steps: {args.max_steps}")
     print(f"Batch size: {args.global_batch_size} (global), {args.micro_batch_size} (micro)")
     print(f"Sequence length: {args.seq_length}")
     print("=" * 80 + "\n")
+    
+    # Configure resume behavior
+    resume_config = None
+    if args.resume_from:
+        resume_config = nl.AutoResume(
+            resume_from_path=f"hf://{args.resume_from}",
+            resume_if_exists=True,
+        )
     
     llm.train(
         model=model,
         data=data,
         trainer=trainer,
         optim=optimizer,
-        resume=nl.AutoResume(
-            resume_from_path=f"hf://{args.resume_from}",
-            resume_if_exists=True,
-        ),
+        resume=resume_config,
     )
     
     print("\n" + "=" * 80)

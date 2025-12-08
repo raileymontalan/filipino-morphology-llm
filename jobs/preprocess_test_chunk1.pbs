@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #PBS -N preprocess_chunk1
-#PBS -l select=1:ncpus=32:mem=256GB
+#PBS -l select=1:ncpus=32:ngpus=1:mem=256GB
 #PBS -l walltime=02:00:00
 #PBS -q AISG_debug
 #PBS -j oe
@@ -24,6 +24,13 @@ export JOB_ID=${PBS_JOBID}
 export JOB_NAME=${PBS_JOBNAME}
 
 cd ${JOB_WORK_DIR}
+
+# Activate Python environment
+if [ -f "${JOB_WORK_DIR}/env/bin/activate" ]; then
+    source "${JOB_WORK_DIR}/env/bin/activate"
+else
+    echo "Warning: Python environment not found at ${JOB_WORK_DIR}/env/bin/activate"
+fi
 
 # Load environment variables
 if [ -f "${JOB_WORK_DIR}/.env" ]; then
@@ -74,8 +81,8 @@ else
     export OUTPUT_SUBDIR="${TOKENIZER_NAME}"
 fi
 
-export CHUNK_FILE_HOST="${JOB_WORK_DIR}/data/chunks/${TOKENIZER_NAME}/chunk_$(printf '%04d' ${CHUNK_NUM}).jsonl"
-export CHUNK_FILE_CONTAINER="/workspace/data/chunks/${TOKENIZER_NAME}/chunk_$(printf '%04d' ${CHUNK_NUM}).jsonl"
+export CHUNK_FILE_HOST="${JOB_WORK_DIR}/data/chunks/chunk_$(printf '%04d' ${CHUNK_NUM}).jsonl"
+export CHUNK_FILE_CONTAINER="/workspace/data/chunks/chunk_$(printf '%04d' ${CHUNK_NUM}).jsonl"
 export OUTPUT_PREFIX_CONTAINER="/workspace/data/processed/${OUTPUT_SUBDIR}/chunk_$(printf '%04d' ${CHUNK_NUM})"
 export WORKERS=32
 export JSON_KEY="text"
@@ -139,7 +146,8 @@ ENROOT_ENV="-e HF_HOME=${HF_HOME} \
     -e HF_TOKEN=${HF_TOKEN} \
     -e TOKENIZATION_MODE=${TOKENIZATION_MODE} \
     -e EXPAND_PROP=${EXPAND_PROP} \
-    -e SEED=${SEED}"
+    -e SEED=${SEED} \
+    -e NVIDIA_DISABLE_REQUIRE=1"
 
 # ============================================================================
 # Run Preprocessing

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #PBS -N preprocess_parallel
-#PBS -J 1-1
-#PBS -l select=1:ncpus=32:mem=256GB
+#PBS -J 1-20
+#PBS -l select=1:ncpus=32:ngpus=1:mem=256GB
 #PBS -l walltime=08:00:00
 #PBS -q AISG_debug
 #PBS -j oe
@@ -39,13 +39,20 @@ export ARRAY_INDEX=${PBS_ARRAY_INDEX:-1}
 
 cd ${JOB_WORK_DIR}
 
+# Activate Python environment
+if [ -f "${JOB_WORK_DIR}/env/bin/activate" ]; then
+    source "${JOB_WORK_DIR}/env/bin/activate"
+else
+    echo "Warning: Python environment not found at ${JOB_WORK_DIR}/env/bin/activate"
+fi
+
 # Load environment variables
 if [ -f "${JOB_WORK_DIR}/.env" ]; then
     set +u  # Temporarily allow undefined variables
     source "${JOB_WORK_DIR}/.env"
     set -u
 else
-    echo "Error: .env file not found"
+    echo "Error: .env file not found at ${JOB_WORK_DIR}/.env"
     exit 1
 fi
 
@@ -80,15 +87,16 @@ export TOKENIZATION_MODE="${TOKENIZATION_MODE:-vanilla}"
 export EXPAND_PROP="${EXPAND_PROP:-0.1}"
 export SEED="${SEED:-42}"
 
-# Chunk directory (on host and in container) - organized by tokenizer and mode
+# Chunk directory (on host and in container) - chunks are in data/chunks/ directly
+# Output organized by tokenizer and mode
 if [ "${TOKENIZATION_MODE}" = "stochastok" ]; then
     export OUTPUT_SUBDIR="${TOKENIZER_NAME}_stochastok_${EXPAND_PROP}"
 else
     export OUTPUT_SUBDIR="${TOKENIZER_NAME}"
 fi
 
-export HOST_CHUNK_DIR="${JOB_WORK_DIR}/data/chunks/${TOKENIZER_NAME}"
-export CONTAINER_CHUNK_DIR="/workspace/data/chunks/${TOKENIZER_NAME}"
+export HOST_CHUNK_DIR="${JOB_WORK_DIR}/data/chunks"
+export CONTAINER_CHUNK_DIR="/workspace/data/chunks"
 export CONTAINER_OUTPUT_DIR="/workspace/data/processed/${OUTPUT_SUBDIR}"
 export CHUNK_FILE_HOST=$(printf "${HOST_CHUNK_DIR}/chunk_%04d.jsonl" ${ARRAY_INDEX})
 export CHUNK_FILE_CONTAINER=$(printf "${CONTAINER_CHUNK_DIR}/chunk_%04d.jsonl" ${ARRAY_INDEX})
@@ -157,7 +165,8 @@ ENROOT_ENV="-e HF_HOME=${HF_HOME} \
     -e HF_TOKEN=${HF_TOKEN} \
     -e TOKENIZATION_MODE=${TOKENIZATION_MODE} \
     -e EXPAND_PROP=${EXPAND_PROP} \
-    -e SEED=${SEED}"
+    -e SEED=${SEED} \
+    -e NVIDIA_DISABLE_REQUIRE=1"
 
 # ============================================================================
 # Run Preprocessing

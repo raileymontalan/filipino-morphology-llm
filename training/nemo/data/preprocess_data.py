@@ -48,7 +48,7 @@ def parse_args():
         "--output-prefix",
         type=str,
         required=True,
-        help="Output prefix (will create <prefix>_text_document.bin and .idx)",
+        help="Output prefix (will create <prefix>.bin and .idx)",
     )
     parser.add_argument(
         "--tokenizer-model",
@@ -170,15 +170,23 @@ def preprocess_vanilla(args, input_path):
             capture_output=False,  # Show output in real-time
         )
         
-        # Verify output files were created
-        bin_file = Path(f"{args.output_prefix}_text_document.bin")
-        idx_file = Path(f"{args.output_prefix}_text_document.idx")
+        # Verify output files were created (Megatron adds _text_document suffix)
+        bin_file_megatron = Path(f"{args.output_prefix}_text_document.bin")
+        idx_file_megatron = Path(f"{args.output_prefix}_text_document.idx")
         
-        if bin_file.exists() and idx_file.exists():
+        if bin_file_megatron.exists() and idx_file_megatron.exists():
+            # Rename files to remove _text_document suffix for simpler usage
+            bin_file = Path(f"{args.output_prefix}.bin")
+            idx_file = Path(f"{args.output_prefix}.idx")
+            
             print()
             print("=" * 80)
             print("✓ Preprocessing Complete!")
             print("=" * 80)
+            print(f"Renaming output files (removing _text_document suffix)...")
+            bin_file_megatron.rename(bin_file)
+            idx_file_megatron.rename(idx_file)
+            
             print(f"Binary file: {bin_file} ({bin_file.stat().st_size / 1e9:.2f} GB)")
             print(f"Index file:  {idx_file} ({idx_file.stat().st_size / 1e6:.2f} MB)")
             print()
@@ -335,19 +343,27 @@ def preprocess_stochastok(args, input_path):
             capture_output=False,
         )
         
-        # Verify output files
-        bin_file = Path(f"{args.output_prefix}_text_document.bin")
-        idx_file = Path(f"{args.output_prefix}_text_document.idx")
+        # Verify output files (Megatron adds _text_document suffix)
+        bin_file_megatron = Path(f"{args.output_prefix}_text_document.bin")
+        idx_file_megatron = Path(f"{args.output_prefix}_text_document.idx")
         
-        if bin_file.exists() and idx_file.exists():
-            # Clean up temporary file
-            temp_jsonl.unlink()
-            print(f"✓ Cleaned up temporary file: {temp_jsonl}")
+        if bin_file_megatron.exists() and idx_file_megatron.exists():
+            # Rename files to remove _text_document suffix for simpler usage
+            bin_file = Path(f"{args.output_prefix}.bin")
+            idx_file = Path(f"{args.output_prefix}.idx")
             
             print()
             print("=" * 80)
             print("✓ Stochastok Preprocessing Complete!")
             print("=" * 80)
+            print(f"Renaming output files (removing _text_document suffix)...")
+            bin_file_megatron.rename(bin_file)
+            idx_file_megatron.rename(idx_file)
+            
+            # Clean up temporary file
+            temp_jsonl.unlink()
+            print(f"✓ Cleaned up temporary file: {temp_jsonl}")
+            
             print(f"Binary file: {bin_file} ({bin_file.stat().st_size / 1e9:.2f} GB)")
             print(f"Index file:  {idx_file} ({idx_file.stat().st_size / 1e6:.2f} MB)")
             print()
