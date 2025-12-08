@@ -3,16 +3,10 @@ import json
 from tqdm import tqdm
 import random
 import numpy as np
+from .base_processor import TokenizerProcessor
 
 
 # Helper functions for file operations
-def get_file_path(filename):
-    """Get absolute file path relative to this module."""
-    current_file_path = os.path.abspath(__file__)
-    current_directory = os.path.dirname(current_file_path)
-    return os.path.join(current_directory, filename)
-
-
 def load_json_dict(filepath, convert_tuple_keys=False):
     """Load a JSON dictionary from file with optional tuple key conversion."""
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -39,12 +33,12 @@ def replace_tokens_at_index(token_ids, idx, replacement, num_to_remove=1):
     return token_ids[:idx] + list(replacement) + token_ids[idx + num_to_remove:]
 
 
-class PatokProcessor:
+class PatokProcessor(TokenizerProcessor):
     """
     A processor that applies Patok expansion to the tokenized data.
     """
     def __init__(self, tokenizer, expand_prop=0.3, contract_prop=0.3, affix_preference=0.7, affixes_file=None):
-        self.tokenizer = tokenizer
+        super().__init__(tokenizer)
         self.expand_prop = expand_prop
         self.contract_prop = contract_prop
         self.affix_preference = affix_preference
@@ -114,8 +108,8 @@ class PatokProcessor:
 
     def set_expansions(self):
         """Loads expansions dict from file if it exists, otherwise builds and saves it."""
-        filename = "data/tokenizer_expansions.json"
-        json_file_path = get_file_path(filename)
+        filename = f"{self.tokenizer_name}_expansions.json"
+        json_file_path = self.get_cache_path("tokenizer_expansions", filename)
 
         if os.path.exists(json_file_path):
             print(f"Found '{filename}' at: {json_file_path}")
@@ -131,8 +125,8 @@ class PatokProcessor:
 
     def set_contractions(self):
         """Loads contractions dict from file if it exists, otherwise builds and saves it."""
-        filename = "data/tokenizer_contractions.json"
-        json_file_path = get_file_path(filename)
+        filename = f"{self.tokenizer_name}_contractions.json"
+        json_file_path = self.get_cache_path("tokenizer_expansions", filename)
 
         if os.path.exists(json_file_path):
             print(f"Found '{filename}' at: {json_file_path}")
@@ -159,9 +153,9 @@ class PatokProcessor:
         return contractions, expansions
 
     def _build_contractions_dict(self):
-        """Build the contractions dictionary from tokenizer's mergeable ranks."""
-        ttokenizer_byt2int = self.tokenizer._mergeable_ranks
-        ttokenizer_tokens_as_tuples = [tuple(token) for token in ttokenizer_byt2int.keys()]
+        """Build the contractions dictionary from tokenizer vocab."""
+        ttokenizer_byt2int = self.get_mergeable_ranks()
+        ttokenizer_tokens_as_tuples = [tuple(token) for token in list(ttokenizer_byt2int.keys())]
         contractions = {}
         
         for i, (token_as_bytes, token_id) in tqdm(
@@ -169,8 +163,8 @@ class PatokProcessor:
             total=len(ttokenizer_byt2int),
             desc="Building tokenizer's contractions"
         ):
-            if i < 256:
-                assert len(token_as_bytes) == 1
+            # Skip tokens that are too short to split
+            if len(token_as_bytes) <= 1:
                 continue
             
             # Find all valid splits for this token
@@ -180,10 +174,13 @@ class PatokProcessor:
                 ttokenizer_byt2int
             )
             
+            # Some tokenizers (like Gemma with byte-fallback) may have tokens that can't be split
+            # Just skip them - they won't be contractible
+            if len(splits) == 0:
+                continue
+            
             for first_id, second_id in splits:
                 contractions[(first_id, second_id)] = token_id
-            
-            assert len(splits) >= 1, f"No contraction found for {token_as_bytes=}"
         
         return contractions
 

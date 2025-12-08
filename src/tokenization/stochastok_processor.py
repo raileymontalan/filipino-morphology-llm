@@ -9,12 +9,15 @@ from tqdm import tqdm
 import random
 import numpy as np
 
-class StochastokProcessor:
+from .base_processor import TokenizerProcessor
+
+
+class StochastokProcessor(TokenizerProcessor):
     """
     A processor that applies stochastok expansion to the tokenized data.
     """
     def __init__(self, tokenizer, expand_prop=None):
-        self.tokenizer = tokenizer
+        super().__init__(tokenizer)
         self.expand_prop = expand_prop
         self.set_expansions()
 
@@ -49,10 +52,8 @@ class StochastokProcessor:
         """
         Loads expansions dict from file if it exists, otherwise builds and saves it to file.
         """
-        filename = "data/tokenizer_expansions.json"
-        current_file_path = os.path.abspath(__file__)
-        current_directory = os.path.dirname(current_file_path)
-        json_file_path = os.path.join(current_directory, filename)
+        filename = f"{self.tokenizer_name}_expansions.json"
+        json_file_path = self.get_cache_path("tokenizer_expansions", filename)
 
         # Check if the file exists
         if os.path.exists(json_file_path):
@@ -82,7 +83,7 @@ class StochastokProcessor:
             eg. expansions = {token_id: [(token_id1_1, token_id1_2), (token_id2_1, token_id2_2), ...]}
         """
         # 1. Build merges dict
-        ttokenizer_byt2int = self.tokenizer._mergeable_ranks # Mapping of tokenizer's vocab {token_string: token_id} stored as {bytes: int}
+        ttokenizer_byt2int = self.get_mergeable_ranks()  # Mapping of tokenizer's vocab {token_string: token_id} stored as {bytes: int}
         ttokenizer_tokens_as_tuples = [tuple(token) for token in list(ttokenizer_byt2int.keys())] # Needed to be able to use `in` operator
         merges = {}
         for i, (token_as_bytes, token_id) in tqdm(
@@ -90,8 +91,10 @@ class StochastokProcessor:
             total=len(ttokenizer_byt2int),
             desc="Building tokenizer's merges",
             ):
-            if i < 256:
-                assert len(token_as_bytes) == 1
+            # Skip tokens that are too short to split (e.g., single bytes in tiktoken)
+            # Note: Gemma tokenizer doesn't have this structure, so we just skip short tokens
+            if len(token_as_bytes) <= 1:
+                continue
             else:
                 # print(f"{i=}: {token_as_bytes.decode('utf-8')}")
                 num_merges = 0
@@ -106,7 +109,10 @@ class StochastokProcessor:
                         merges[(first_part_id, second_part_id)] = token_id
                         num_merges += 1
                         # print(f"{first_part}: {first_part_id} + {second_part}: {second_part_id} -> {token_as_bytes}: {token_id}")
-                assert num_merges >= 1, f"No merge found for {token_as_bytes=}: {list(token_as_bytes)=}"
+                # Note: Some tokenizers (like Gemma with byte-fallback) may have tokens that can't be split
+                # This is okay - we just skip them for stochastok expansion
+                if num_merges == 0:
+                    continue
         
         # 2. Build expansions dict
         expansions = {}

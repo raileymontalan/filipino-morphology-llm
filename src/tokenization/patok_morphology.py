@@ -12,9 +12,10 @@ import numpy as np
 import ahocorasick
 from tqdm import tqdm
 from typing import List, Tuple, Optional
+from .base_processor import TokenizerProcessor
 
 
-class MorphologyAwarePatokProcessor:
+class MorphologyAwarePatokProcessor(TokenizerProcessor):
     """
     Patok processor with morphological awareness for Filipino.
 
@@ -45,7 +46,7 @@ class MorphologyAwarePatokProcessor:
             expand_prop: Default proportion of tokens to expand
             contract_prop: Default proportion of tokens to contract
         """
-        self.tokenizer = tokenizer
+        super().__init__(tokenizer)
         self.affix_awareness = affix_awareness
         self.affix_awareness_if_overlap = affix_awareness_if_overlap
         self.expand_prop = expand_prop
@@ -140,7 +141,7 @@ class MorphologyAwarePatokProcessor:
         """
         print("Building token expansions...")
 
-        tokenizer_vocab = self.tokenizer._mergeable_ranks
+        tokenizer_vocab = self.get_mergeable_ranks()
         tokens_as_tuples = [tuple(token) for token in tokenizer_vocab.keys()]
 
         # Build merges first
