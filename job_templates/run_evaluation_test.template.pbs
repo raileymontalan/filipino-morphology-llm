@@ -1,0 +1,43 @@
+#!/bin/bash
+
+#PBS -N eval_test
+#PBS -l select=1:ncpus=8:ngpus=1:mem=32GB
+#PBS -l walltime=01:00:00
+#PBS -q YOUR_QUEUE_NAME
+#PBS -j oe
+#PBS -o /path/to/your/logs/
+
+# ============================================================================
+# PBS Job Script for Quick Evaluation Test - TEMPLATE
+# ============================================================================
+#
+# This is a TEMPLATE file. Copy it to run_evaluation_test.pbs and customize:
+#   1. Replace YOUR_QUEUE_NAME with your cluster queue
+#   2. Replace /path/to/your/logs/ with your actual log directory
+#
+# Quick test with GPT-2 on a small sample of PACUTE benchmark.
+#
+# Usage:
+#   cp jobs/run_evaluation_test.template.pbs jobs/run_evaluation_test.pbs
+#   # Edit run_evaluation_test.pbs with your paths
+#   qsub jobs/run_evaluation_test.pbs
+#
+# ============================================================================
+
+set -euo pipefail
+
+# Setup
+cd ${PBS_O_WORKDIR}
+
+# Activate environment
+source env/bin/activate
+
+# Run quick test
+echo "Running quick evaluation test..."
+python scripts/run_evaluation.py \
+    --models gpt2 \
+    --benchmarks pacute \
+    --max-samples 100 \
+    --device cuda
+
+echo "Test complete!"

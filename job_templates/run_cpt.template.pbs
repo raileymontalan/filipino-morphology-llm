@@ -1,19 +1,26 @@
 #!/bin/bash
 
 #PBS -N gemma3_cpt
-#PBS -l select=1:ngpus=8:mem=512GB
-#PBS -l walltime=12:00:00
-#PBS -q AISG_debug
+#PBS -l select=1:ngpus=YOUR_NGPUS:mem=YOUR_MEMORY
+#PBS -l walltime=YOUR_WALLTIME
+#PBS -q YOUR_QUEUE_NAME
 #PBS -j oe
-#PBS -o /scratch_aisg/SPEC-SF-AISG/railey/logs/
+#PBS -o /path/to/your/logs/
 
 # ============================================================================
-# PBS Job Script for Continued Pretraining with NeMo Framework Container
+# PBS Job Script for Continued Pretraining with NeMo Framework Container - TEMPLATE
 # ============================================================================
 #
-# This script runs the CPT job using Enroot container on PBS (Hopper cluster)
+# This is a TEMPLATE file. Copy to jobs/ and customize:
+#   1. Replace YOUR_QUEUE_NAME with your cluster queue (e.g., gpu, debug)
+#   2. Replace /path/to/your/logs/ with your log directory path
+#   3. Replace YOUR_NGPUS (typically 1, 4, or 8)
+#   4. Replace YOUR_MEMORY (e.g., 64GB, 128GB, 512GB)
+#   5. Replace YOUR_WALLTIME (e.g., 02:00:00, 12:00:00)
 #
 # Usage:
+#   cp job_templates/run_cpt.template.pbs jobs/run_cpt.pbs
+#   vim jobs/run_cpt.pbs  # Customize placeholders
 #   qsub jobs/run_cpt.pbs
 #
 # To customize the job, you can override environment variables:
@@ -95,8 +102,8 @@ export MASTER_PORT=$((10000 + $RANDOM % 10000))
 # Directory Setup
 # ============================================================================
 
-export LOG_DIR="${LOG_DIR:-/scratch_aisg/SPEC-SF-AISG/railey/logs/training}/${JOB_ID}"
-export CKPT_DIR="/scratch_aisg/SPEC-SF-AISG/railey/logs/checkpoints/gemma3-cpt-${JOB_ID}"
+export LOG_DIR="${LOG_DIR:-/path/to/your/logs/training}/${JOB_ID}"
+export CKPT_DIR="/path/to/your/checkpoints/gemma3-cpt-${JOB_ID}"
 
 mkdir -p ${LOG_DIR}
 mkdir -p ${CKPT_DIR}
@@ -171,7 +178,8 @@ export NCCL_TIMEOUT=1800
 mkdir -p "${LOG_DIR}/nccl"
 
 # Fix for gloo fullMesh error (adjust interface name as needed for your cluster)
-export GLOO_SOCKET_IFNAME=ib0
+# Common options: ib0 (InfiniBand), eth0 (Ethernet), eno1, enp0s31f6
+export GLOO_SOCKET_IFNAME=YOUR_NETWORK_INTERFACE
 
 # ============================================================================
 # Additional Environment Variables

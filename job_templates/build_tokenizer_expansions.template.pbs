@@ -1,13 +1,33 @@
 #!/bin/bash
-#PBS -N build_tokenizer_expansions
-#PBS -q AISG_debug
-#PBS -l select=1:ncpus=4:mem=32gb
-#PBS -l walltime=08:00:00
+
+#PBS -N build_tokenizer
+#PBS -q YOUR_QUEUE_NAME
+#PBS -l select=1:ncpus=YOUR_NCPUS:mem=YOUR_MEMORY
+#PBS -l walltime=YOUR_WALLTIME
 #PBS -j oe
-#PBS -o /scratch_aisg/SPEC-SF-AISG/railey/logs/
+#PBS -o /path/to/your/logs/
+
+# ============================================================================
+# PBS Job Script for Building Tokenizer Expansions - TEMPLATE
+# ============================================================================
+#
+# This is a TEMPLATE file. Copy to jobs/ and customize:
+#   1. Replace YOUR_QUEUE_NAME with your cluster queue
+#   2. Replace /path/to/your/logs/ with your log directory
+#   3. Replace YOUR_NCPUS (typically 4)
+#   4. Replace YOUR_MEMORY (typically 32GB)
+#   5. Replace YOUR_WALLTIME (e.g., 08:00:00)
+#
+# Usage:
+#   cp job_templates/build_tokenizer_expansions.template.pbs jobs/build_tokenizer_expansions.pbs
+#   vim jobs/build_tokenizer_expansions.pbs  # Customize
+#   qsub -v TOKENIZER_NAME=gpt2 jobs/build_tokenizer_expansions.pbs
+#   qsub -v TOKENIZER_NAME=google/gemma-3-1b-pt jobs/build_tokenizer_expansions.pbs
+#
+# ============================================================================
 
 # Load environment variables
-cd /scratch_aisg/SPEC-SF-AISG/railey/filipino-morphology-llm
+cd /path/to/your/project
 source .env
 
 # Activate conda environment
@@ -48,12 +68,12 @@ print("Building tokenizer expansions...")
 print("(This may take several hours for large vocabularies)")
 processor = StochastokProcessor(tokenizer, expand_prop=0.1)
 print()
-print(f"✓ Expansions built and saved!")
-print(f"  Number of expansions: {len(processor.expansions)}")
-print(f"  Tokenizer name: {processor.tokenizer_name}")
+
+print("✓ Tokenizer expansions built successfully")
+print(f"  Saved to: {processor.expansions_path}")
 EOF
 
 echo "================================================================"
-echo "Completed!"
+echo "Complete!"
 echo "End time: $(date)"
 echo "================================================================"

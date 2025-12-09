@@ -1,0 +1,104 @@
+#!/bin/bash
+
+#PBS -N preprocess_data
+#PBS -l select=1:ncpus=YOUR_NCPUS:mem=YOUR_MEMORY
+#PBS -l walltime=YOUR_WALLTIME
+#PBS -q YOUR_QUEUE_NAME
+#PBS -j oe
+#PBS -o /path/to/your/logs/
+
+# ============================================================================
+# PBS Job Script for Data Preprocessing - TEMPLATE
+# ============================================================================
+#
+# This is a TEMPLATE file. Copy to jobs/ and customize:
+#   1. Replace YOUR_QUEUE_NAME with your cluster queue
+#   2. Replace /path/to/your/logs/ with your log directory
+#   3. Replace YOUR_NCPUS (typically 32 or 64 for preprocessing)
+#   4. Replace YOUR_MEMORY (e.g., 256GB, 512GB)
+#   5. Replace YOUR_WALLTIME (e.g., 08:00:00)
+#
+# This script preprocesses JSONL data into Megatron binary format (.bin + .idx)
+# Run this ONCE before training.
+#
+# Usage:
+#   cp job_templates/preprocess_data.template.pbs jobs/preprocess_data.pbs
+#   vim jobs/preprocess_data.pbs  # Customize
+#   qsub jobs/preprocess_data.pbs
+#
+# To customize:
+#   qsub -v INPUT=/path/to/data.jsonl,OUTPUT=/path/to/output jobs/preprocess_data.pbs
+#
+# ============================================================================
+
+set -euo pipefail
+
+# ============================================================================
+# Setup Environment
+# ============================================================================
+
+export JOB_WORK_DIR=${PBS_O_WORKDIR}
+export JOB_ID=${PBS_JOBID}
+export JOB_NAME=${PBS_JOBNAME}
+
+cd ${JOB_WORK_DIR}
+
+# Activate Python environment
+if [ -f "${JOB_WORK_DIR}/env/bin/activate" ]; then
+    source "${JOB_WORK_DIR}/env/bin/activate"
+else
+    echo "Warning: Python environment not found at ${JOB_WORK_DIR}/env/bin/activate"
+fi
+
+# Load environment variables
+if [ -f "${JOB_WORK_DIR}/.env" ]; then
+    echo "Loading environment from .env file..."
+    set +u  # Temporarily allow undefined variables
+    source "${JOB_WORK_DIR}/.env"
+    set -u
+else
+    echo "Warning: .env file not found"
+fi
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# Input/Output paths (can be overridden via qsub -v)
+export INPUT_FILE="${INPUT:-data/corpora/your_data.jsonl}"
+export OUTPUT_PREFIX="${OUTPUT:-data/processed/your_data_text_document}"
+export TOKENIZER_NAME="${TOKENIZER_NAME:-google/gemma-3-1b-pt}"
+
+# Processing parameters
+export WORKERS="${WORKERS:-32}"
+export SEQ_LENGTH="${SEQ_LENGTH:-2048}"
+
+echo "============================================================================"
+echo "Data Preprocessing Configuration"
+echo "============================================================================"
+echo "Job ID: ${JOB_ID}"
+echo "Input file: ${INPUT_FILE}"
+echo "Output prefix: ${OUTPUT_PREFIX}"
+echo "Tokenizer: ${TOKENIZER_NAME}"
+echo "Workers: ${WORKERS}"
+echo "Sequence length: ${SEQ_LENGTH}"
+echo "============================================================================"
+
+# ============================================================================
+# Run Preprocessing
+# ============================================================================
+
+python scripts/preprocess_data.py \
+    --input "${INPUT_FILE}" \
+    --output-prefix "${OUTPUT_PREFIX}" \
+    --tokenizer-name "${TOKENIZER_NAME}" \
+    --workers ${WORKERS} \
+    --seq-length ${SEQ_LENGTH} \
+    --append-eod
+
+echo "============================================================================"
+echo "Preprocessing Complete"
+echo "============================================================================"
+echo "Output files:"
+ls -lh ${OUTPUT_PREFIX}.*
+echo "============================================================================"

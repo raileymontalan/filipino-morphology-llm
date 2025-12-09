@@ -3,17 +3,23 @@
 #PBS -N eval_batch
 #PBS -l select=1:ncpus=16:ngpus=1:mem=64GB
 #PBS -l walltime=12:00:00
-#PBS -q AISG_debug
+#PBS -q YOUR_QUEUE_NAME
 #PBS -j oe
-#PBS -o /scratch_aisg/SPEC-SF-AISG/railey/logs/
+#PBS -o /path/to/your/logs/
 
 # ============================================================================
-# PBS Job Script for Batch Benchmark Evaluation
+# PBS Job Script for Batch Benchmark Evaluation - TEMPLATE
 # ============================================================================
 #
-# This script runs batch evaluation on multiple models and benchmarks.
+# This is a TEMPLATE file. Copy it to run_evaluation_batch.pbs and customize:
+#   1. Replace YOUR_QUEUE_NAME with your cluster queue
+#   2. Replace /path/to/your/logs/ with your actual log directory
+#   3. Replace /path/to/your/project with your project directory
+#   4. Adjust resource requirements (ncpus, ngpus, mem) as needed
 #
 # Usage:
+#   cp jobs/run_evaluation_batch.template.pbs jobs/run_evaluation_batch.pbs
+#   # Edit run_evaluation_batch.pbs with your paths
 #   qsub jobs/run_evaluation_batch.pbs
 #
 # To customize models and benchmarks:
@@ -50,7 +56,8 @@ fi
 # Directory Setup
 # ============================================================================
 
-export LOG_DIR="/scratch_aisg/SPEC-SF-AISG/railey/logs/evaluation/${JOB_ID}"
+# CUSTOMIZE: Set your log directory path
+export LOG_DIR="/path/to/your/logs/evaluation/${JOB_ID}"
 export OUTPUT_DIR="${OUTPUT_DIR:-${JOB_WORK_DIR}/results/benchmark_evaluation}"
 
 mkdir -p ${LOG_DIR}
@@ -72,7 +79,7 @@ MODELS_LLAMA="${MODELS_LLAMA:-llama-3.2-1b llama-3.2-1b-it}"
 MODELS_GEMMA="${MODELS_GEMMA:-gemma-2b gemma-2b-it}"
 
 # Benchmarks to run (can be overridden)
-BENCHMARKS="${BENCHMARKS:-pacute cute hierarchical langgame math}"
+BENCHMARKS="${BENCHMARKS:-pacute cute hierarchical langgame multi-digit-addition}"
 
 # ============================================================================
 # Print Configuration
