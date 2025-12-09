@@ -62,22 +62,36 @@ python src/evaluation/benchmark_generation/generate_hierarchical_benchmark.py
 - `data/benchmarks/hierarchical_gen.jsonl`
 
 ### 3. LangGame Dataset
-**Script:** `make_langgame_dataset.py`
+**Script:** `generate_langgame_benchmark.py`
 
 Generates language reasoning tasks for testing linguistic pattern recognition.
 
-**Requirements:** Stochastok environment and dependencies
+**Usage:**
+```bash
+cd /path/to/filipino-morphology-llm
+python src/evaluation/datasets/scripts/generate_langgame_benchmark.py
+```
 
-**Note:** This script requires specific stochastok components and may need to be run from the training environment.
+**Output:**
+- `data/benchmarks/langgame_mcq.jsonl` (1,000 samples)
+
+**Note:** Use `scripts/generate_benchmark_variants.py` to create the generative version (`langgame_gen.jsonl`).
 
 ### 4. Multi-digit Addition Dataset
-**Script:** `make_multi_digit_addition_dataset.py`
+**Script:** `generate_math_benchmark.py`
 
 Generates mathematical reasoning benchmarks using multi-digit addition problems.
 
-**Requirements:** Stochastok environment and dependencies
+**Usage:**
+```bash
+cd /path/to/filipino-morphology-llm
+python src/evaluation/datasets/scripts/generate_math_benchmark.py
+```
 
-**Note:** This script requires specific stochastok components and may need to be run from the training environment.
+**Output:**
+- `data/benchmarks/multi_digit_addition_gen.jsonl` (1,000 samples)
+
+**Note:** Use `scripts/generate_benchmark_variants.py` to create the MCQ version (`multi_digit_addition_mcq.jsonl`).
 
 ## Generate All Benchmarks
 
@@ -115,12 +129,13 @@ The scripts expect the following data files to exist:
 | Benchmark | MCQ File | Gen File | MCQ Samples | Gen Samples |
 |-----------|----------|----------|-------------|-------------|
 | **Affixation** | `affixation_mcq.jsonl` | `affixation_gen.jsonl` | 140 | 140 |
-| **Composition** | `composition_mcq.jsonl` | `composition_gen.jsonl` | 1,946 | 1,400 |
-| **Manipulation** | `manipulation_mcq.jsonl` | `manipulation_gen.jsonl` | 2,560 | 2,560 |
-| **Syllabification** | `syllabification_mcq.jsonl` | `syllabification_gen.jsonl` | 640 | 640 |
-| **Hierarchical** | `hierarchical_mcq.jsonl` | `hierarchical_gen.jsonl` | 598 | 599 |
-| **Stress** | `stress_mcq.jsonl` | `stress_gen.jsonl` | 150 | 150 |
-| **TOTAL** | - | - | **6,034** | **5,489** |
+| **Composition** | `composition_mcq.jsonl` | `composition_gen.jsonl` | 900 | 500 |
+| **Manipulation** | `manipulation_mcq.jsonl` | `manipulation_gen.jsonl` | 800 | 800 |
+| **Syllabification** | `syllabification_mcq.jsonl` | `syllabification_gen.jsonl` | 400 | 400 |
+| **LangGame** | `langgame_mcq.jsonl` | `langgame_gen.jsonl` | 1,000 | 1,000 |
+| **Multi-digit Addition** | `multi_digit_addition_mcq.jsonl` | `multi_digit_addition_gen.jsonl` | 1,000 | 1,000 |
+| **CUTE** | - | `cute_gen.jsonl` | - | 1,400 |
+| **TOTAL** | - | - | **4,240** | **5,240** |
 
 **Naming Convention:** All benchmarks follow the pattern `{benchmark_name}_{mcq|gen}.jsonl`
 

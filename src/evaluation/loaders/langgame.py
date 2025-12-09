@@ -2,11 +2,21 @@ import random
 import json
 import os
 
-def load_langgame(split, **kwargs):
-    """Load and process the benchmark from JSONL file"""
+def load_langgame(format="mcq", **kwargs):
+    """
+    Load and process the LangGame benchmark from JSONL file.
+    
+    Args:
+        format: "mcq" or "gen" (default: "mcq")
+    
+    Yields:
+        - prefix: The question
+        - ground_truth: The correct answer
+        - false_options: List of incorrect options (empty for gen format)
+    """
     current_file_path = os.path.abspath(__file__)
     dir_of_file = os.path.dirname(current_file_path)
-    jsonl_path = os.path.join(dir_of_file, f"../../../data/benchmarks/langgame_{split}.jsonl")
+    jsonl_path = os.path.join(dir_of_file, f"../../../data/benchmarks/langgame_{format}.jsonl")
     
     # Load all samples from JSONL
     samples = []
@@ -14,7 +24,7 @@ def load_langgame(split, **kwargs):
         for line in f:
             samples.append(json.loads(line.strip()))
     
-    print(f"LangGame: Loaded {len(samples)} examples from {split} split.")
+    print(f"LangGame ({format.upper()}): Loaded {len(samples)} examples.")
     
     # Shuffle indices
     index = list(range(len(samples)))
@@ -23,7 +33,13 @@ def load_langgame(split, **kwargs):
     for i in index:
         sample = samples[i]
         prefix = sample["question"]
-        options = sample["options"]
-        ground_truth = options[0]
-        false_options = options[1:]
+        
+        if format == "mcq":
+            options = sample["options"]
+            ground_truth = options[0]
+            false_options = options[1:]
+        else:  # gen
+            ground_truth = sample["answer"]
+            false_options = []
+        
         yield prefix, ground_truth, false_options

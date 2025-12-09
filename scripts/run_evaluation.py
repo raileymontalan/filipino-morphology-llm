@@ -217,7 +217,7 @@ class HuggingFaceEvaluator:
         Evaluate on a benchmark.
 
         Args:
-            benchmark_name: Name of the benchmark (cute, pacute, langgame-val, etc.)
+            benchmark_name: Name of the benchmark (cute, pacute, langgame, etc.)
             max_samples: Maximum number of samples to evaluate (None = all)
 
         Returns:
@@ -393,7 +393,7 @@ def main():
     parser.add_argument(
         "--benchmarks",
         nargs="+",
-        default=["pacute", "cute", "langgame-val"],
+        default=["pacute", "cute", "langgame"],
         help="Benchmarks to evaluate on"
     )
     parser.add_argument(
@@ -415,6 +415,13 @@ def main():
         choices=["cuda", "cpu"],
         help="Device to run on"
     )
+    parser.add_argument(
+        "--eval-mode",
+        type=str,
+        default="both",
+        choices=["mcq", "gen", "both"],
+        help="Evaluation mode: 'mcq' (MCQ only), 'gen' (generative only), or 'both' (default)"
+    )
 
     args = parser.parse_args()
 
@@ -423,6 +430,61 @@ def main():
 
     # Timestamp for this run
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Filter benchmarks based on eval mode
+    benchmarks_to_eval = []
+    
+    # Benchmark format mapping
+    benchmark_formats = {
+        'pacute': 'mcq',
+        'pacute-mcq': 'mcq',
+        'pacute-gen': 'gen',
+        'pacute-affixation': 'mcq',
+        'pacute-affixation-mcq': 'mcq',
+        'pacute-affixation-gen': 'gen',
+        'pacute-composition': 'mcq',
+        'pacute-composition-mcq': 'mcq',
+        'pacute-composition-gen': 'gen',
+        'pacute-manipulation': 'mcq',
+        'pacute-manipulation-mcq': 'mcq',
+        'pacute-manipulation-gen': 'gen',
+        'pacute-syllabification': 'mcq',
+        'pacute-syllabification-mcq': 'mcq',
+        'pacute-syllabification-gen': 'gen',
+        'cute': 'gen',
+        'cute-gen': 'gen',
+        'hierarchical': 'mcq',
+        'hierarchical-mcq': 'mcq',
+        'hierarchical-gen': 'gen',
+        'langgame': 'mcq',
+        'langgame-mcq': 'mcq',
+        'langgame-gen': 'gen',
+        'multi-digit-addition': 'gen',
+        'multi-digit-addition-gen': 'gen',
+        'multi-digit-addition-mcq': 'mcq',
+    }
+    
+    for benchmark in args.benchmarks:
+        bench_format = benchmark_formats.get(benchmark, 'both')
+        if args.eval_mode == 'both':
+            benchmarks_to_eval.append(benchmark)
+        elif args.eval_mode == bench_format:
+            benchmarks_to_eval.append(benchmark)
+        elif args.eval_mode == 'mcq' and bench_format == 'gen':
+            print(f"⚠️  Skipping {benchmark} (generative-only benchmark, eval-mode=mcq)")
+        elif args.eval_mode == 'gen' and bench_format == 'mcq':
+            print(f"⚠️  Skipping {benchmark} (MCQ-only benchmark, eval-mode=gen)")
+    
+    if not benchmarks_to_eval:
+        print(f"❌ No benchmarks to evaluate with eval-mode={args.eval_mode}")
+        return
+    
+    print(f"\n{'='*80}")
+    print(f"Evaluation Configuration")
+    print(f"{'='*80}")
+    print(f"Mode: {args.eval_mode.upper()}")
+    print(f"Benchmarks: {', '.join(benchmarks_to_eval)}")
+    print(f"{'='*80}")
 
     # Run evaluations
     all_results = {}
@@ -444,7 +506,7 @@ def main():
 
             # Evaluate on each benchmark
             model_results = {}
-            for benchmark_name in args.benchmarks:
+            for benchmark_name in benchmarks_to_eval:
                 results = evaluator.evaluate_benchmark(
                     benchmark_name=benchmark_name,
                     max_samples=args.max_samples

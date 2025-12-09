@@ -76,6 +76,24 @@ def generate_math():
     print()
 
 
+def generate_cute():
+    """Generate CUTE dataset."""
+    print("=" * 80)
+    print("Generating CUTE Dataset")
+    print("=" * 80)
+    print()
+    
+    try:
+        from evaluation.datasets.scripts.generate_cute_benchmark import main as generate_cute_main
+        generate_cute_main()
+        print()
+    except ImportError as e:
+        print(f"Warning: Could not generate CUTE dataset")
+        print(f"  {e}")
+        print(f"  This dataset requires the 'datasets' library")
+        print()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate all evaluation benchmarks",
@@ -85,7 +103,7 @@ def main():
     parser.add_argument(
         '--benchmarks',
         nargs='+',
-        choices=['pacute', 'hierarchical', 'langgame', 'math', 'all'],
+        choices=['pacute', 'hierarchical', 'langgame', 'math', 'cute', 'all'],
         default=['all'],
         help='Which benchmarks to generate (default: all)'
     )
@@ -94,7 +112,7 @@ def main():
     
     # Determine which benchmarks to generate
     if 'all' in args.benchmarks:
-        benchmarks_to_generate = ['pacute', 'hierarchical', 'langgame', 'math']
+        benchmarks_to_generate = ['pacute', 'hierarchical', 'langgame', 'math', 'cute']
     else:
         benchmarks_to_generate = args.benchmarks
     
@@ -140,6 +158,15 @@ def main():
             success_count += 1
         except Exception as e:
             print(f"Failed to generate Math: {e}")
+            print()
+            fail_count += 1
+    
+    if 'cute' in benchmarks_to_generate:
+        try:
+            generate_cute()
+            success_count += 1
+        except Exception as e:
+            print(f"Failed to generate CUTE: {e}")
             print()
             fail_count += 1
     

@@ -2,7 +2,7 @@
 Generate Multi-digit Addition Benchmark
 
 Creates simple arithmetic tasks for evaluating numerical reasoning.
-Output: data/benchmarks/multi_digit_addition_{train|val}.jsonl
+Output: data/benchmarks/multi_digit_addition_gen.jsonl (evaluation data only)
 """
 
 import os
@@ -73,29 +73,18 @@ def main():
     benchmarks_path = project_root / "data" / "benchmarks"
     benchmarks_path.mkdir(parents=True, exist_ok=True)
     
-    print(f"Saving JSONL benchmarks to {benchmarks_path}...")
+    print(f"Saving JSONL benchmark to {benchmarks_path}...")
     
-    # Train split
-    train_jsonl_path = benchmarks_path / "multi_digit_addition_train.jsonl"
-    with open(train_jsonl_path, 'w', encoding='utf-8') as f:
-        for i in range(len(train_questions)):
-            item = {
-                "question": train_questions[i],
-                "answer": train_answers[i],
-            }
-            f.write(json.dumps(item, ensure_ascii=False) + '\n')
-    print(f"✓ Saved {len(train_questions)} train samples to {train_jsonl_path}")
-    
-    # Val split
-    val_jsonl_path = benchmarks_path / "multi_digit_addition_val.jsonl"
-    with open(val_jsonl_path, 'w', encoding='utf-8') as f:
+    # Evaluation data only (no train split needed)
+    gen_jsonl_path = benchmarks_path / "multi_digit_addition_gen.jsonl"
+    with open(gen_jsonl_path, 'w', encoding='utf-8') as f:
         for i in range(len(val_questions)):
             item = {
                 "question": val_questions[i],
                 "answer": val_answers[i],
             }
             f.write(json.dumps(item, ensure_ascii=False) + '\n')
-    print(f"✓ Saved {len(val_questions)} val samples to {val_jsonl_path}")
+    print(f"✓ Saved {len(val_questions)} samples to {gen_jsonl_path}")
     print()
     
     print("="*70)

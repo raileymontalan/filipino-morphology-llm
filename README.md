@@ -64,7 +64,7 @@ See **[docs/TRAINING.md](docs/TRAINING.md)** for complete training guide.
 
 ```bash
 # Generate benchmarks
-python scripts/generate_evaluation_datasets.py
+python scripts/generate_benchmarks.py
 
 # Evaluate model
 python scripts/run_evaluation.py --models gpt2 --benchmarks pacute
@@ -82,32 +82,41 @@ See **[docs/EVALUATION.md](docs/EVALUATION.md)** for complete evaluation guide.
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | Research overview, methods, and experimental design |
 | **[docs/TRAINING.md](docs/TRAINING.md)** | Training workflows and configurations |
 | **[docs/EVALUATION.md](docs/EVALUATION.md)** | Benchmark generation and model evaluation |
+| **[docs/BENCHMARK_FORMATS.md](docs/BENCHMARK_FORMATS.md)** | Benchmark format specifications (MCQ vs GEN) |
 | **[training/nemo/data/DATA_PREPROCESSING.md](training/nemo/data/DATA_PREPROCESSING.md)** | Data preprocessing guide |
 
 ---
 
 ## Evaluation Benchmarks
 
-### PACUTE (11,225 tasks)
+### PACUTE (2,240 MCQ / 1,840 GEN)
 **P**ilipino **A**ffix and **C**haracter-Level **U**nderstanding of **T**okens **E**valuation
 
-- **Affixation** (280 tasks): Filipino affix identification and application
-- **Composition** (3,905 tasks): Character counting, diacritics, word formation
-- **Manipulation** (5,120 tasks): Character operations (insert, delete, swap)
-- **Syllabification** (1,280 tasks): Syllable counting, stress, reduplication
+- **Affixation** (140 MCQ + 140 GEN): Filipino affix identification and application
+- **Composition** (900 MCQ + 500 GEN): Character counting, diacritics, word formation
+- **Manipulation** (800 MCQ + 800 GEN): Character operations (insert, delete, swap)
+- **Syllabification** (400 MCQ + 400 GEN): Syllable counting, stress, reduplication
 
-### Hierarchical (1,798 tasks)
+Both Multiple Choice (log probability) and Generative (text generation) formats available.
+
+### Hierarchical Benchmark (600 MCQ + 598 GEN)
 Diagnostic tasks across 6 compositional levels to identify where models fail:
-- Level 0: Character Recognition
-- Level 1: Character Manipulation
-- Level 2: Morpheme Decomposition ⚠️ **Critical bottleneck**
-- Level 3: Morpheme Manipulation
-- Level 4: Morpheme Composition
-- Level 5: Complex Reasoning
+
+- **Level 0: Character Recognition** (~200 tasks) - Character identification and counting
+- **Level 1: Character Manipulation** (~200 tasks) - Insert, delete, swap, substitute operations
+- **Level 2: Morpheme Decomposition** (~200 tasks) - ⚠️ **Critical bottleneck** - Affix identification, root extraction
+- **Level 3: Morpheme Manipulation** (~200 tasks) - Affix removal and replacement
+- **Level 4: Morpheme Composition** (~200 tasks) - Affix application and combination
+- **Level 5: Complex Reasoning** (~200 tasks) - Multi-step morphological transformations
+
+**Key Insight:** Level 2 (Morpheme Decomposition) is the critical bottleneck. Failures here cascade through Levels 3-5.
 
 ### Additional Benchmarks
-- **LangGame** (3,000 tasks): Subword understanding
-- **Math** (3,000 tasks): Multi-digit addition
+- **CUTE** (1,400 GEN): Character Understanding Tasks Evaluation across 14 task types
+- **LangGame** (1,000 MCQ + 1,000 GEN): Subword understanding
+- **Multi-digit Addition** (1,000 MCQ + 1,000 GEN): Numerical reasoning
+
+**Total: 10,678 evaluation tasks** across all benchmarks. All benchmarks support filtering by evaluation mode (`--eval-mode mcq|gen|both`).
 
 ---
 
@@ -120,9 +129,10 @@ filipino-morphology-llm/
 ├── docs/                        # Documentation
 │   ├── RESEARCH.md             # Research overview
 │   ├── TRAINING.md             # Training guide
-│   └── EVALUATION.md           # Evaluation guide
+│   ├── EVALUATION.md           # Evaluation guide
+│   └── BENCHMARK_FORMATS.md    # Benchmark format specs
 ├── data/                        # Data files
-│   ├── benchmarks/             # Evaluation benchmarks
+│   ├── benchmarks/             # Evaluation benchmarks (JSONL)
 │   ├── chunks/                 # Preprocessed chunks
 │   └── processed/              # Binary format data
 ├── src/                         # Source code
@@ -142,7 +152,7 @@ filipino-morphology-llm/
 │   ├── preprocess_data_parallel.pbs
 │   └── preprocess_test_chunk1.pbs
 └── scripts/                     # Utility scripts
-    ├── generate_evaluation_datasets.py  # Generate benchmarks
+    ├── generate_benchmarks.py      # Generate benchmarks
     ├── run_evaluation.py           # Evaluate models
     ├── run_evaluation_batch.sh     # Batch evaluation
     └── evaluate_downstream.py      # Downstream tasks
@@ -173,7 +183,7 @@ processed_ids = processor.affix_aware_expand_contract(token_ids)
 
 ```python
 # Generate all benchmarks
-from scripts.generate_evaluation_datasets import main
+from scripts.generate_benchmarks import main
 main()
 
 # Evaluate model

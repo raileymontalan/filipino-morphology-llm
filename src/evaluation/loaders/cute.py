@@ -18,7 +18,7 @@ import random
 
 def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
     """
-    Load CUTE benchmark from HuggingFace.
+    Load CUTE benchmark from local JSONL file.
 
     Args:
         split: Not used (all data treated as test)
@@ -37,51 +37,49 @@ def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
 
     Note: CUTE is a generative benchmark, not MCQ. The false_options will be empty.
     """
-    try:
-        from datasets import load_dataset
-    except ImportError:
-        raise ImportError(
-            "The 'datasets' library is required for CUTE benchmark. "
-            "Install it with: pip install datasets"
+    import json
+    from pathlib import Path
+    
+    # Load from local JSONL file
+    jsonl_path = Path("data/benchmarks/cute_gen.jsonl")
+    
+    if not jsonl_path.exists():
+        raise FileNotFoundError(
+            f"CUTE benchmark file not found: {jsonl_path}\n"
+            f"Generate it with: python src/evaluation/datasets/scripts/generate_cute_benchmark.py"
         )
-
-    # Load from HuggingFace
-    dataset = load_dataset("leukas/cute")
-
-    # The dataset is organized by task types, not by train/test splits
-    # Collect all tasks across all splits
 
     # Available task types (derived from task naming in prompts)
     all_task_types = [
         'spell', 'spell_inverse', 'contains_char', 'contains_word',
         'orth', 'sem', 'ins_char', 'ins_word', 'del_char', 'del_word',
-        'sub_char', 'sub_word', 'swap_char', 'swap_word'
+        'sub_char', 'sub_word', 'swap_char', 'swap_char'
     ]
 
     if task_types is None:
         task_types = all_task_types
 
-    # Collect tasks from the dataset
-    # The dataset is organized by task type as splits
+    # Load all samples from JSONL
+    all_samples = []
+    with open(jsonl_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            sample = json.loads(line.strip())
+            all_samples.append(sample)
+
+    # Filter by task type if specified
     tasks = []
-    for task_type in all_task_types:
-        if task_type in dataset and (task_types is None or task_type in task_types):
-            task_items = list(dataset[task_type])
-            # Subsample if max_per_task is set
-            if max_per_task is not None and len(task_items) > max_per_task:
-                random.shuffle(task_items)
-                task_items = task_items[:max_per_task]
-            
-            for item in task_items:
-                tasks.append({
-                    'prompt': item['prompt'],
-                    'answer': item['answer'],
-                    'task_type': task_type
-                })
+    task_counts = {}
+    for sample in all_samples:
+        task_type = sample.get('task_type', 'unknown')
+        if task_types is None or task_type in task_types:
+            if task_type not in task_counts:
+                task_counts[task_type] = 0
+            task_counts[task_type] += 1
+            tasks.append(sample)
 
     total = len(tasks)
-    num_tasks = len([t for t in all_task_types if t in dataset and (task_types is None or t in task_types)])
-    print(f"CUTE: Loaded {total} character understanding tasks from HuggingFace ({num_tasks} task types, max {max_per_task} per task).")
+    num_tasks = len(task_counts)
+    print(f"CUTE (GEN): Loaded {total} character understanding tasks from local file ({num_tasks} task types).")
     print(f"Note: CUTE is a generative benchmark (prompt → answer), not MCQ format.")
 
     # Shuffle tasks
@@ -90,7 +88,7 @@ def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
 
     for i in indices:
         task = tasks[i]
-        prefix = task['prompt']
+        prefix = task['question']
         ground_truth = task['answer']
         false_options = []  # Generative task, no MCQ options
 

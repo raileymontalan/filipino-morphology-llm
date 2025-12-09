@@ -9,25 +9,22 @@ import json
 import os
 
 
-def load_multi_digit_addition(split="val", max_samples=1000, **kwargs):
+def load_multi_digit_addition(format="gen", max_samples=1000, **kwargs):
     """
     Load multi-digit addition benchmark from JSONL file.
 
     Args:
-        split: "train" or "val" (default: "val")
+        format: "gen" or "mcq" (default: "gen")
         max_samples: Maximum number of examples to load (default: 1000)
 
     Yields:
-        For MCQ format compatibility:
         - prefix: The question (e.g., "840+425=")
         - ground_truth: The correct answer (e.g., "1265")
-        - false_options: Empty list (generative task, not MCQ)
-
-    Note: This is a generative benchmark, not MCQ. The false_options will be empty.
+        - false_options: List of incorrect options (empty for gen format)
     """
     current_file_path = os.path.abspath(__file__)
     dir_of_file = os.path.dirname(current_file_path)
-    jsonl_path = os.path.join(dir_of_file, f"../../../data/benchmarks/multi_digit_addition_{split}.jsonl")
+    jsonl_path = os.path.join(dir_of_file, f"../../../data/benchmarks/multi_digit_addition_{format}.jsonl")
     
     # Load all samples from JSONL
     samples = []
@@ -37,8 +34,7 @@ def load_multi_digit_addition(split="val", max_samples=1000, **kwargs):
             if max_samples is not None and len(samples) >= max_samples:
                 break
     
-    print(f"Multi-digit Addition: Loaded {len(samples)} examples from {split} split.")
-    print(f"Note: This is a generative benchmark (question → answer), not MCQ format.")
+    print(f"Multi-digit Addition ({format.upper()}): Loaded {len(samples)} examples.")
     
     # Shuffle samples
     indices = list(range(len(samples)))
@@ -47,7 +43,13 @@ def load_multi_digit_addition(split="val", max_samples=1000, **kwargs):
     for i in indices:
         sample = samples[i]
         prefix = sample["question"]
-        ground_truth = sample["answer"]
-        false_options = []  # Generative task, no MCQ options
+        
+        if format == "mcq":
+            options = sample["options"]
+            ground_truth = options[0]
+            false_options = options[1:]
+        else:  # gen
+            ground_truth = sample["answer"]
+            false_options = []
         
         yield prefix, ground_truth, false_options

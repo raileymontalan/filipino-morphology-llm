@@ -349,25 +349,15 @@ print(f"Time taken: {time.time()-start_time:.2f}s\n")
 # datasets_untokenized.save_to_disk(as_datasets_path)
 # print(f"Dataset saved.\n")
 
-# Save as JSONL for benchmarking
+# Save as JSONL for benchmarking (MCQ format for evaluation)
 benchmarks_path = os.path.join("./data", "benchmarks")
 if not os.path.exists(benchmarks_path):
     os.makedirs(benchmarks_path)
-print(f"Saving JSONL benchmarks to {benchmarks_path}...")
-# Train split
-train_jsonl_path = os.path.join(benchmarks_path, "langgame_train.jsonl")
-with open(train_jsonl_path, 'w', encoding='utf-8') as f:
-    for i in range(train_size):
-        item = {
-            "question": question_s[i],
-            "answer": answer_s[i],
-            "options": options_s[i]
-        }
-        f.write(json.dumps(item, ensure_ascii=False) + '\n')
-print(f"✓ Saved {train_size} train samples to {train_jsonl_path}")
-# Val split
-val_jsonl_path = os.path.join(benchmarks_path, "langgame_val.jsonl")
-with open(val_jsonl_path, 'w', encoding='utf-8') as f:
+print(f"Saving JSONL benchmark to {benchmarks_path}...")
+
+# Evaluation data only (no train split needed) - use val_size portion
+mcq_jsonl_path = os.path.join(benchmarks_path, "langgame_mcq.jsonl")
+with open(mcq_jsonl_path, 'w', encoding='utf-8') as f:
     for i in range(train_size, train_size + val_size):
         item = {
             "question": question_s[i],
@@ -375,7 +365,7 @@ with open(val_jsonl_path, 'w', encoding='utf-8') as f:
             "options": options_s[i]
         }
         f.write(json.dumps(item, ensure_ascii=False) + '\n')
-print(f"✓ Saved {val_size} val samples to {val_jsonl_path}\n")
+print(f"✓ Saved {val_size} samples to {mcq_jsonl_path}\n")
 
 # # Load and print (as a check)
 # print("Loading and printing some examples:")

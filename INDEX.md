@@ -28,6 +28,7 @@ Quick guide to all documentation in this repository.
 ### Workflows
 - **[docs/TRAINING.md](docs/TRAINING.md)** - Training workflows, PBS jobs, monitoring, troubleshooting
 - **[docs/EVALUATION.md](docs/EVALUATION.md)** - Benchmark generation, model evaluation, analysis
+- **[docs/BENCHMARK_FORMATS.md](docs/BENCHMARK_FORMATS.md)** - Benchmark format specifications (MCQ vs GEN)
 - **[training/nemo/data/DATA_PREPROCESSING.md](training/nemo/data/DATA_PREPROCESSING.md)** - Data preprocessing for both vanilla and stochastok modes
 
 ---
