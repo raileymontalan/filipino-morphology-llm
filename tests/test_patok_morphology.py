@@ -9,15 +9,22 @@ import sys
 sys.path.insert(0, 'src')
 
 import tiktoken
+from transformers import AutoTokenizer
 from tokenization.patok_morphology import MorphologyAwarePatokProcessor
 
 
 def print_tokens(label, token_ids, tokenizer):
     """Pretty print token IDs and their string representations."""
-    tokens = [
-        tokenizer.decode_single_token_bytes(tid).decode("utf-8", "replace")
-        for tid in token_ids
-    ]
+
+    try:
+        tokens = [
+            tokenizer.decode_single_token_bytes(tid).decode("utf-8", "replace")
+            for tid in token_ids
+        ]
+    except:
+        tokens = [
+            tokenizer.decode(tid) for tid in token_ids
+        ]
     print(f"\n{label}:")
     print(f"  Token IDs: {token_ids}")
     print(f"  Tokens: {tokens}")
@@ -30,8 +37,10 @@ def main():
     print("=" * 80)
 
     # Initialize tokenizer
-    print("\n1. Initializing GPT-2 tokenizer...")
-    tokenizer = tiktoken.get_encoding("gpt2")
+    model = "openai/gpt-oss-20b"
+    print(f"\n1. Initializing {model} tokenizer...")
+    #tokenizer = tiktoken.get_encoding("gpt2")
+    tokenizer =  AutoTokenizer.from_pretrained(model)
 
     # Test sentences from colleague's notebook
     test_sentences = [
@@ -46,24 +55,22 @@ def main():
 
         # Baseline tokenization
         baseline_ids = tokenizer.encode(sentence)
-        print_tokens("Baseline (GPT-2)", baseline_ids, tokenizer)
+        print_tokens(f"Baseline ({model})", baseline_ids, tokenizer)
 
         # Initialize Patok processor
         print("\n2. Initializing Morphology-Aware Patok Processor...")
         patok = MorphologyAwarePatokProcessor(
             tokenizer,
-            affix_awareness=0.95,
-            affix_awareness_if_overlap=0.75,
-            expand_prop=0.1,
-            contract_prop=0.9
+            prefix_file='./src/tokenization/affixes/prefix.txt',
+            infix_file='./src/tokenization/affixes/infix.txt',
+            suffix_file='./src/tokenization/affixes/suffix.txt',
+            expansions_file = './src/tokenization/expansions/expansions_gpt_oss.json'
         )
 
         # Process with Patok
         print("\n3. Applying Patok processing...")
         patok_ids = patok.contract_expand(
             baseline_ids.copy(),
-            tok_to_contract=[2, 3],
-            contract_prob=[0.5, 0.5],
             disable_tqdm=False
         )
         print_tokens("Patok (Morphology-Aware)", patok_ids, tokenizer)
@@ -89,10 +96,15 @@ def main():
             tid for tid in patok_ids if tid in patok.affix_ids
         ]
         if affix_tokens:
-            affix_strs = [
-                tokenizer.decode_single_token_bytes(tid).decode("utf-8", "replace")
-                for tid in affix_tokens
-            ]
+            try:
+                affix_strs = [
+                    tokenizer.decode_single_token_bytes(tid).decode("utf-8", "replace")
+                    for tid in affix_tokens
+                ]
+            except:
+                affix_strs = [
+                    tokenizer.decode(tid) for tid in affix_tokens
+                ]
             print(f"  Preserved affixes: {affix_strs}")
 
 
