@@ -14,6 +14,7 @@ from datetime import datetime
 
 import torch
 import torch.nn.functional as F
+import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from tqdm import tqdm
 
@@ -23,39 +24,34 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from evaluation.loaders import load_benchmark
 
 
-# Model configurations: (HuggingFace model name, type)
-MODEL_CONFIGS = {
-    # GPT-2
-    "gpt2": ("gpt2", "pt"),
-    "gpt2-medium": ("gpt2-medium", "pt"),
-    "gpt2-large": ("gpt2-large", "pt"),
+def load_model_configs(config_path=None):
+    """
+    Load model configurations from YAML file.
+    
+    Args:
+        config_path: Path to the YAML config file. If None, uses default location.
+    
+    Returns:
+        Dictionary mapping model names to (path, type) tuples
+    """
+    if config_path is None:
+        # Default to configs/models.yaml
+        script_dir = Path(__file__).parent.parent
+        config_path = script_dir / "configs" / "models.yaml"
+    
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    # Convert YAML format to the expected dictionary format
+    model_configs = {}
+    for model_name, model_info in config['models'].items():
+        model_configs[model_name] = (model_info['path'], model_info['type'])
+    
+    return model_configs
 
-    # Gemma
-    "gemma-2b": ("google/gemma-2b", "pt"),
-    "gemma-2b-it": ("google/gemma-2b-it", "it"),
-    "gemma-7b": ("google/gemma-7b", "pt"),
-    "gemma-7b-it": ("google/gemma-7b-it", "it"),
 
-    # Llama
-    "llama-3.2-1b": ("meta-llama/Llama-3.2-1B", "pt"),
-    "llama-3.2-1b-it": ("meta-llama/Llama-3.2-1B-Instruct", "it"),
-    "llama-3.2-3b": ("meta-llama/Llama-3.2-3B", "pt"),
-    "llama-3.2-3b-it": ("meta-llama/Llama-3.2-3B-Instruct", "it"),
-
-    # Qwen
-    "qwen-2.5-0.5b": ("Qwen/Qwen2.5-0.5B", "pt"),
-    "qwen-2.5-0.5b-it": ("Qwen/Qwen2.5-0.5B-Instruct", "it"),
-    "qwen-2.5-1.5b": ("Qwen/Qwen2.5-1.5B", "pt"),
-    "qwen-2.5-1.5b-it": ("Qwen/Qwen2.5-1.5B-Instruct", "it"),
-    "qwen-2.5-3b": ("Qwen/Qwen2.5-3B", "pt"),
-    "qwen-2.5-3b-it": ("Qwen/Qwen2.5-3B-Instruct", "it"),
-
-    # GPT-OSS (OpenGPT models - alternative open source GPT implementations)
-    "cerebras-gpt-111m": ("cerebras/Cerebras-GPT-111M", "pt"),
-    "cerebras-gpt-256m": ("cerebras/Cerebras-GPT-256M", "pt"),
-    "cerebras-gpt-590m": ("cerebras/Cerebras-GPT-590M", "pt"),
-    "cerebras-gpt-1.3b": ("cerebras/Cerebras-GPT-1.3B", "pt"),
-}
+# Load model configurations from YAML
+MODEL_CONFIGS = load_model_configs()
 
 
 class HuggingFaceEvaluator:
@@ -212,16 +208,18 @@ class HuggingFaceEvaluator:
             'prefix_match': prefix_match,
         }
 
-    def evaluate_benchmark(self, benchmark_name, max_samples=None):
+    def evaluate_benchmark(self, benchmark_name, max_samples=None, check_existing=True, timestamp=None):
         """
         Evaluate on a benchmark.
 
         Args:
             benchmark_name: Name of the benchmark (cute, pacute, langgame, etc.)
             max_samples: Maximum number of samples to evaluate (None = all)
+            check_existing: Whether to check for existing inference results (default: True)
+            timestamp: Timestamp for output files (if None, uses current time)
 
         Returns:
-            Dictionary with results
+            Dictionary with results, or None if skipped
         """
         print(f"\nEvaluating on {benchmark_name}...")
 
@@ -254,13 +252,33 @@ class HuggingFaceEvaluator:
             print(f"No samples loaded for {benchmark_name}")
             return None
 
+        # Determine setting for metadata
+        setting = "gen" if is_generative else "mcq"
+        
+        # Check if inference results already exist
+        if check_existing:
+            inference_dir = os.path.join("results", self.model_name, "inference")
+            inference_file = os.path.join(
+                inference_dir,
+                f"{benchmark_name}.jsonl"
+            )
+            if os.path.exists(inference_file):
+                print(f"\n{'='*80}")
+                print(f"⏭️  SKIPPING: {benchmark_name}")
+                print(f"{'='*80}")
+                print(f"Reason: Inference results already exist")
+                print(f"File: {inference_file}")
+                print(f"Note: Use --overwrite flag to re-run evaluation")
+                print(f"{'='*80}\n")
+                return {'skipped': True, 'inference_file': inference_file}
+
         # Evaluate based on format
         if is_generative:
-            return self._evaluate_generative_benchmark(benchmark_items, benchmark_name)
+            return self._evaluate_generative_benchmark(benchmark_items, benchmark_name, setting=setting, timestamp=timestamp)
         else:
-            return self._evaluate_mcq_benchmark(benchmark_items, benchmark_name)
+            return self._evaluate_mcq_benchmark(benchmark_items, benchmark_name, setting=setting, timestamp=timestamp)
 
-    def _evaluate_mcq_benchmark(self, benchmark_items, benchmark_name):
+    def _evaluate_mcq_benchmark(self, benchmark_items, benchmark_name, setting=None, timestamp=None):
         """Evaluate MCQ format benchmark."""
         confidences = []
         correct_count = 0
@@ -313,10 +331,12 @@ class HuggingFaceEvaluator:
         results['num_samples'] = total_count
         results['format'] = 'mcq'
         results['detailed_results'] = detailed_results
+        results['setting'] = setting
+        results['timestamp'] = timestamp
 
         return results
 
-    def _evaluate_generative_benchmark(self, benchmark_items, benchmark_name):
+    def _evaluate_generative_benchmark(self, benchmark_items, benchmark_name, setting=None, timestamp=None):
         """Evaluate generative format benchmark."""
         exact_matches = 0
         contains_matches = 0
@@ -366,7 +386,9 @@ class HuggingFaceEvaluator:
             'contains_match_accuracy': contains_accuracy,
             'prefix_match_accuracy': prefix_accuracy,
             'format': 'generative',
-            'detailed_results': detailed_results
+            'detailed_results': detailed_results,
+            'setting': setting,
+            'timestamp': timestamp
         }
 
         return results
@@ -420,16 +442,37 @@ def main():
         description="Run benchmark evaluation on multiple models"
     )
     parser.add_argument(
+        "--model-config",
+        type=str,
+        default=None,
+        help="Path to model configuration YAML file (default: configs/models.yaml)"
+    )
+    parser.add_argument(
         "--models",
         nargs="+",
         default=["gpt2"],
-        choices=list(MODEL_CONFIGS.keys()),
-        help="Models to evaluate"
+        help="Models to evaluate (must be defined in model config)"
     )
     parser.add_argument(
         "--benchmarks",
         nargs="+",
-        default=["pacute", "cute", "langgame"],
+        default=[
+            "pacute-affixation-mcq", 
+            "pacute-composition-mcq",
+            "pacute-manipulation-mcq",
+            "pacute-syllabification-mcq",
+            "hierarchical-mcq",
+            "langgame-mcq",
+            "multi-digit-addition-mcq",
+            "cute-gen",
+            "pacute-affixation-gen",
+            "pacute-composition-gen",
+            "pacute-manipulation-gen",
+            "pacute-syllabification-gen",
+            "hierarchical-gen",
+            "langgame-gen",
+            "multi-digit-addition-gen",
+        ],
         help="Benchmarks to evaluate on"
     )
     parser.add_argument(
@@ -458,8 +501,26 @@ def main():
         choices=["mcq", "gen", "both"],
         help="Evaluation mode: 'mcq' (MCQ only), 'gen' (generative only), or 'both' (default)"
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing inference results (default: False, skip if results exist)"
+    )
 
     args = parser.parse_args()
+    
+    # Load model configurations (reload if custom config specified)
+    if args.model_config:
+        global MODEL_CONFIGS
+        MODEL_CONFIGS = load_model_configs(args.model_config)
+        print(f"Loaded custom model config from: {args.model_config}")
+    
+    # Validate model choices
+    invalid_models = [m for m in args.models if m not in MODEL_CONFIGS]
+    if invalid_models:
+        print(f"Error: Invalid model names: {invalid_models}")
+        print(f"Available models: {list(MODEL_CONFIGS.keys())}")
+        return
 
     # Create output directory
     os.makedirs(args.output_dir, exist_ok=True)
@@ -519,6 +580,7 @@ def main():
     print(f"Evaluation Configuration")
     print(f"{'='*80}")
     print(f"Mode: {args.eval_mode.upper()}")
+    print(f"Overwrite existing results: {args.overwrite}")
     print(f"Benchmarks: {', '.join(benchmarks_to_eval)}")
     print(f"{'='*80}")
 
@@ -545,18 +607,25 @@ def main():
             for benchmark_name in benchmarks_to_eval:
                 results = evaluator.evaluate_benchmark(
                     benchmark_name=benchmark_name,
-                    max_samples=args.max_samples
+                    max_samples=args.max_samples,
+                    check_existing=(not args.overwrite),
+                    timestamp=timestamp
                 )
 
                 if results:
+                    # Check if evaluation was skipped
+                    if results.get('skipped'):
+                        continue
+                    
                     # Save detailed inference results
                     detailed_results = results.pop('detailed_results', None)
+                    setting = results.pop('setting', None)
                     if detailed_results:
                         inference_dir = os.path.join("results", model_name, "inference")
                         os.makedirs(inference_dir, exist_ok=True)
                         inference_file = os.path.join(
                             inference_dir,
-                            f"{benchmark_name}_{timestamp}.jsonl"
+                            f"{benchmark_name}.jsonl"
                         )
                         with open(inference_file, 'w') as f:
                             for result in detailed_results:
