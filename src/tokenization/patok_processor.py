@@ -1,9 +1,46 @@
+"""
+DEPRECATED: This module is deprecated. Use MorphologyAwarePatokProcessor instead.
+
+The MorphologyAwarePatokProcessor provides:
+- Aho-Corasick automaton for efficient affix detection
+- Separate prefix/infix/suffix files for fine-grained control
+- Syllable duplication awareness (Filipino reduplication)
+- Contract-then-expand pipeline with better morphological handling
+
+Migration:
+    # Old (deprecated):
+    from src.tokenization.patok_processor import PatokProcessor
+    processor = PatokProcessor(tokenizer, expand_prop=0.3, contract_prop=0.3)
+    token_ids = processor.affix_aware_expand_contract(token_ids)
+
+    # New (recommended):
+    from src.tokenization.patok_morphology import MorphologyAwarePatokProcessor
+    processor = MorphologyAwarePatokProcessor(
+        tokenizer,
+        prefix_file='src/tokenization/affixes/prefix.txt',
+        infix_file='src/tokenization/affixes/infix.txt',
+        suffix_file='src/tokenization/affixes/suffix.txt',
+    )
+    token_ids = processor.contract_expand(token_ids)
+
+See patok_morphology.py for the full API documentation.
+"""
+
 import os
 import json
+import warnings
 from tqdm import tqdm
 import random
 import numpy as np
 from .base_processor import TokenizerProcessor
+
+# Issue deprecation warning on import
+warnings.warn(
+    "PatokProcessor is deprecated. Use MorphologyAwarePatokProcessor from "
+    "src.tokenization.patok_morphology instead. See module docstring for migration guide.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 
 def get_project_root():

@@ -24,7 +24,7 @@ Standard BPE tokenization (GPT-2, Gemma, LLaMA) systematically destroys morpheme
 |----------|--------|--------|
 | **Baseline** | Standard BPE (no modification) | ✅ Implemented |
 | **Stochastok** | Stochastic token expansion (~10%) | ✅ Implemented |
-| **Patok** | Affix-aware expand-contract (30%+30%) | 🚧 In development |
+| **Patok** | Morphology-aware contract-expand (90%+10%) | ✅ Implemented |
 
 ---
 
@@ -80,18 +80,20 @@ Expanded: [K][u][m][ain]  (split "um" → "u" + "m")
 
 ---
 
-## 3. Patok (Affix-Aware) - In Development
+## 3. Patok (Affix-Aware)
 
-**Method:** Expand + contract with preference for Filipino morpheme boundaries
+**Method:** Contract-expand with Filipino morphological awareness
 
-**Implementation:** `src/tokenization/patok_processor.py`
+**Implementation:** `src/tokenization/patok_morphology.py` (MorphologyAwarePatokProcessor)
 
 **How it works:**
-1. Load Filipino affixes from `data/affixes/filipino_affixes.txt`
-2. Expand ~30% of tokens (split into sub-tokens)
-3. Contract ~30% of adjacent tokens (merge pairs)
-4. Prefer contractions that form valid affixes (70% probability)
-5. Result: Sequences aligned with morpheme boundaries
+1. Load Filipino affixes from separate prefix/infix/suffix files
+2. Build Aho-Corasick automaton for fast affix detection
+3. Contract 2-4 adjacent tokens (90% of positions)
+4. Re-expand with affix-awareness (split off known affixes)
+5. Apply duplication-awareness (Filipino syllable reduplication)
+6. Final stochastic expansion of non-affixes (10%)
+7. Result: Sequences aligned with morpheme boundaries
 
 **Example:**
 ```
@@ -261,49 +263,50 @@ class StochastokProcessor:
         return expansions
 ```
 
-### Patok Processor
+### Patok Processor (MorphologyAwarePatokProcessor)
 
-**File:** `src/tokenization/patok_processor.py`
+**File:** `src/tokenization/patok_morphology.py`
 
 **Key methods:**
 ```python
-class PatokProcessor:
-    def __init__(self, tokenizer, affixes_file,
-                 expand_prop=0.3, contract_prop=0.3, 
-                 affix_preference=0.7):
+class MorphologyAwarePatokProcessor:
+    def __init__(self, tokenizer,
+                 prefix_file='src/tokenization/affixes/prefix.txt',
+                 infix_file='src/tokenization/affixes/infix.txt',
+                 suffix_file='src/tokenization/affixes/suffix.txt',
+                 contract_prop=0.9,
+                 expand_prop=0.1,
+                 affix_awareness=0.95):
         self.tokenizer = tokenizer
-        self.expand_prop = expand_prop
         self.contract_prop = contract_prop
-        self.affix_preference = affix_preference
-        self.load_affixes(affixes_file)
-        self.build_expansions()
-        self.build_contractions()
-    
-    def load_affixes(self, affixes_file):
-        # Load Filipino affixes
-        # Convert to token IDs
-        # Store in self.affix_token_ids
-    
-    def affix_aware_expand_contract(self, token_ids, num_iterations=3):
-        for _ in range(num_iterations):
-            # Expand phase: split tokens (avoid affixes)
-            token_ids = self._selective_expand(token_ids)
-            # Contract phase: merge pairs (prefer affixes)
-            token_ids = self._affix_preferring_contract(token_ids)
+        self.expand_prop = expand_prop
+        self.affix_awareness = affix_awareness
+        # Load affixes and build Aho-Corasick automaton
+        self.affixes = self._build_affix_list()
+        self.affix_finder = self._build_affix_finder(self.affixes)
+        self.affix_ids = self._generate_affix_ids(self.affixes)
+        self.expansions = self._build_expansions()
+
+    def contract_expand(self, token_ids, contract_prop=None, expand_prop=None):
+        """Main Patok pipeline: contract-expand with morphological awareness."""
+        for _ in range(num_contractions):
+            # Contract random tokens (avoiding affixes)
+            contracted, start_idx, end_idx = self.contract_randomly(token_ids)
+            # Affix-aware expansion (split off known affixes)
+            aff_aware = self.affix_aware_expand(contracted)
+            # Duplication-aware expansion (Filipino reduplication)
+            dup_aware = self.dup_aware_expand(aff_aware)
+            # Re-tokenize with base tokenizer
+            new_token_ids = self.tokenizer_expand(dup_aware)
+            # Replace in original sequence
+            token_ids[start_idx:end_idx] = new_token_ids
+        # Final stochastic expansion of non-affixes
+        token_ids = self.stochastok_expand_nonaffs(token_ids, expand_prop)
         return token_ids
-    
-    def _selective_expand(self, token_ids):
-        # Identify expandable tokens
-        # Prefer non-affix tokens for expansion
-        # Fallback to affix tokens if needed
-        return expanded_ids
-    
-    def _affix_preferring_contract(self, token_ids):
-        # Find all contractable pairs
-        # Categorize: affix-forming vs regular
-        # Use affix_preference probability
-        # Prefer affix-forming contractions
-        return contracted_ids
+
+    def find_affixes(self, s):
+        """Use Aho-Corasick automaton for fast multi-pattern matching."""
+        return [(start_idx, affix) for end_idx, affix in self.affix_finder.iter(s)]
 ```
 
 **Validity guarantees:**

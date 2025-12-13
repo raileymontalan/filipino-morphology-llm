@@ -80,6 +80,7 @@ See **[docs/EVALUATION.md](docs/EVALUATION.md)** for complete evaluation guide.
 |----------|---------|
 | **[SETUP.md](SETUP.md)** | Environment setup and installation |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | Research overview, methods, and experimental design |
+| **[docs/TRAINING_PLAN.md](docs/TRAINING_PLAN.md)** | Complete training plan with timeline and commands |
 | **[docs/TRAINING.md](docs/TRAINING.md)** | Training workflows and configurations |
 | **[docs/EVALUATION.md](docs/EVALUATION.md)** | Benchmark generation and model evaluation |
 | **[docs/BENCHMARK_FORMATS.md](docs/BENCHMARK_FORMATS.md)** | Benchmark format specifications (MCQ vs GEN) |
@@ -145,8 +146,8 @@ filipino-morphology-llm/
 │   ├── tokenization/               # Tokenization processors
 │   │   ├── base_processor.py       # Base class with common utilities
 │   │   ├── stochastok_processor.py # Stochastic token expansion
-│   │   ├── patok_processor.py      # Affix-aware expand-contract
-│   │   ├── patok_morphology.py     # Filipino morphology detection
+│   │   ├── patok_morphology.py     # Morphology-aware Patok (RECOMMENDED)
+│   │   ├── patok_processor.py      # DEPRECATED - use patok_morphology.py
 │   │   └── affix_decomposition.py  # Affix decomposition utilities
 │   │
 │   ├── evaluation/                 # Evaluation framework
@@ -276,13 +277,15 @@ processor = StochastokProcessor(tokenizer, expand_prop=0.1)
 expanded_ids = processor.expand(token_ids)
 ```
 
-**Patok** (`src/tokenization/patok_processor.py`):
+**Patok** (`src/tokenization/patok_morphology.py`):
 ```python
-processor = PatokProcessor(tokenizer, 
-                          expand_prop=0.3, 
-                          contract_prop=0.3,
-                          affix_preference=0.7)
-processed_ids = processor.affix_aware_expand_contract(token_ids)
+processor = MorphologyAwarePatokProcessor(
+    tokenizer,
+    prefix_file='src/tokenization/affixes/prefix.txt',
+    infix_file='src/tokenization/affixes/infix.txt',
+    suffix_file='src/tokenization/affixes/suffix.txt',
+)
+processed_ids = processor.contract_expand(token_ids)
 ```
 
 ### Evaluation Framework

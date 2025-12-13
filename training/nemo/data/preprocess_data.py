@@ -7,23 +7,33 @@ NeMo's PreTrainingDataModule expects Megatron binary format, not raw JSONL.
 IMPORTANT: This script must be run INSIDE the NeMo container, not on the host!
 The preprocessing tools are only available in the container environment.
 
-Supports two tokenization modes:
+Supports three tokenization modes:
 1. vanilla: Standard tokenization (default)
-2. stochastok: Applies token expansion based on merge vocabulary
+2. stochastok: Stochastic token expansion (~10% expansion)
+3. patok: Morphology-aware expand-contract with Filipino affix awareness
 
 Usage (inside container):
-    # Vanilla tokenization
+    # Vanilla tokenization (baseline)
     python /workspace/scripts/preprocess_data.py \\
         --input /workspace/data/chunks/chunk_0001.jsonl \\
         --output-prefix /workspace/data/processed/chunk_0001 \\
         --tokenizer-model google/gemma-3-1b-pt
-    
+
     # Stochastok tokenization
     python /workspace/scripts/preprocess_data.py \\
         --input /workspace/data/chunks/chunk_0001.jsonl \\
         --output-prefix /workspace/data/processed/chunk_0001_stochastok \\
         --tokenizer-model google/gemma-3-1b-pt \\
         --tokenization-mode stochastok \\
+        --expand-prop 0.1
+
+    # Patok tokenization (morphology-aware)
+    python /workspace/scripts/preprocess_data.py \\
+        --input /workspace/data/chunks/chunk_0001.jsonl \\
+        --output-prefix /workspace/data/processed/chunk_0001_patok \\
+        --tokenizer-model google/gemma-3-1b-pt \\
+        --tokenization-mode patok \\
+        --contract-prop 0.9 \\
         --expand-prop 0.1
 """
 
@@ -71,21 +81,51 @@ def parse_args():
     parser.add_argument(
         "--tokenization-mode",
         type=str,
-        choices=["vanilla", "stochastok"],
+        choices=["vanilla", "stochastok", "patok"],
         default="vanilla",
-        help="Tokenization mode: 'vanilla' (default) or 'stochastok' (with token expansion)",
+        help="Tokenization mode: 'vanilla' (default), 'stochastok', or 'patok' (morphology-aware)",
     )
     parser.add_argument(
         "--expand-prop",
         type=float,
         default=0.1,
-        help="Proportion of tokens to expand when using stochastok mode (default: 0.1)",
+        help="Proportion of tokens to expand (stochastok: 0.1, patok: 0.1)",
+    )
+    parser.add_argument(
+        "--contract-prop",
+        type=float,
+        default=0.9,
+        help="Proportion of tokens to contract (patok mode only, default: 0.9)",
+    )
+    parser.add_argument(
+        "--affix-awareness",
+        type=float,
+        default=0.95,
+        help="Probability of affix-aware processing (patok mode only, default: 0.95)",
+    )
+    parser.add_argument(
+        "--prefix-file",
+        type=str,
+        default="/workspace/src/tokenization/affixes/prefix.txt",
+        help="Path to prefix file (patok mode only)",
+    )
+    parser.add_argument(
+        "--infix-file",
+        type=str,
+        default="/workspace/src/tokenization/affixes/infix.txt",
+        help="Path to infix file (patok mode only)",
+    )
+    parser.add_argument(
+        "--suffix-file",
+        type=str,
+        default="/workspace/src/tokenization/affixes/suffix.txt",
+        help="Path to suffix file (patok mode only)",
     )
     parser.add_argument(
         "--seed",
         type=int,
         default=42,
-        help="Random seed for reproducible stochastok expansion (default: 42)",
+        help="Random seed for reproducible tokenization (default: 42)",
     )
     
     return parser.parse_args()
@@ -113,14 +153,24 @@ def main():
     if args.tokenization_mode == "stochastok":
         print(f"Expand proportion:  {args.expand_prop}")
         print(f"Random seed:        {args.seed}")
+    elif args.tokenization_mode == "patok":
+        print(f"Contract proportion: {args.contract_prop}")
+        print(f"Expand proportion:   {args.expand_prop}")
+        print(f"Affix awareness:     {args.affix_awareness}")
+        print(f"Prefix file:         {args.prefix_file}")
+        print(f"Infix file:          {args.infix_file}")
+        print(f"Suffix file:         {args.suffix_file}")
+        print(f"Random seed:         {args.seed}")
     print("=" * 80)
     print()
-    
+
     # Choose preprocessing mode
     if args.tokenization_mode == "vanilla":
         return preprocess_vanilla(args, input_path)
     elif args.tokenization_mode == "stochastok":
         return preprocess_stochastok(args, input_path)
+    elif args.tokenization_mode == "patok":
+        return preprocess_patok(args, input_path)
     else:
         print(f"✗ Error: Unknown tokenization mode: {args.tokenization_mode}")
         return 1
@@ -386,6 +436,217 @@ def preprocess_stochastok(args, input_path):
     except subprocess.CalledProcessError as e:
         print(f"✗ Preprocessing failed with exit code {e.returncode}")
         # Clean up temporary file
+        if temp_jsonl.exists():
+            temp_jsonl.unlink()
+        return e.returncode
+
+
+def preprocess_patok(args, input_path):
+    """
+    Preprocess with Patok morphology-aware tokenization.
+
+    This involves:
+    1. Tokenizing text with standard tokenizer
+    2. Applying Patok contract-expand with Filipino affix awareness
+    3. Writing processed sequences to Megatron binary format
+    """
+    import json
+    import numpy as np
+    import random
+    from tqdm import tqdm
+
+    # Set random seed for reproducibility
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+
+    print("Loading tokenizer...")
+    try:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_model)
+        print(f"✓ Loaded tokenizer: {args.tokenizer_model}")
+        print(f"  Vocab size: {tokenizer.vocab_size}")
+    except Exception as e:
+        print(f"✗ Error loading tokenizer: {e}")
+        return 1
+
+    print()
+    print("Initializing MorphologyAwarePatokProcessor...")
+
+    # Import MorphologyAwarePatokProcessor
+    try:
+        import sys
+        sys.path.insert(0, "/workspace/src/tokenization")
+        from patok_morphology import MorphologyAwarePatokProcessor
+
+        # Verify affix files exist
+        from pathlib import Path
+        for affix_file in [args.prefix_file, args.infix_file, args.suffix_file]:
+            if not Path(affix_file).exists():
+                print(f"✗ Error: Affix file not found: {affix_file}")
+                return 1
+
+        processor = MorphologyAwarePatokProcessor(
+            tokenizer,
+            prefix_file=args.prefix_file,
+            infix_file=args.infix_file,
+            suffix_file=args.suffix_file,
+            contract_prop=args.contract_prop,
+            expand_prop=args.expand_prop,
+            affix_awareness=args.affix_awareness,
+        )
+        print(f"✓ MorphologyAwarePatokProcessor initialized")
+        print(f"  Number of affix versions: {len(processor.affixes)}")
+        print(f"  Number of affix token IDs: {len(processor.affix_ids)}")
+        print(f"  Number of expandable tokens: {len(processor.expansions)}")
+    except Exception as e:
+        print(f"✗ Error initializing MorphologyAwarePatokProcessor: {e}")
+        print()
+        print("Make sure MorphologyAwarePatokProcessor is available in /workspace/src/tokenization/")
+        print("And that affix files exist at the specified paths.")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+    print()
+    print("Creating intermediate JSONL with Patok-processed tokens...")
+
+    # Create temporary file for processed tokens
+    temp_dir = Path(args.output_prefix).parent
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_jsonl = temp_dir / f"{Path(args.output_prefix).name}_patok_temp.jsonl"
+
+    try:
+        with open(input_path, 'r', encoding='utf-8') as infile, \
+             open(temp_jsonl, 'w', encoding='utf-8') as outfile:
+
+            total_lines = sum(1 for _ in open(input_path, 'r', encoding='utf-8'))
+
+            total_original_tokens = 0
+            total_processed_tokens = 0
+
+            for line in tqdm(infile, total=total_lines, desc="Processing documents"):
+                try:
+                    doc = json.loads(line)
+                    text = doc.get(args.text_key, "")
+
+                    if not text:
+                        continue
+
+                    # Tokenize
+                    token_ids = tokenizer.encode(text, add_special_tokens=False)
+                    original_length = len(token_ids)
+
+                    # Apply Patok contract-expand
+                    processed_ids = processor.contract_expand(
+                        token_ids,
+                        contract_prop=args.contract_prop,
+                        expand_prop=args.expand_prop,
+                        disable_tqdm=True
+                    )
+
+                    total_original_tokens += original_length
+                    total_processed_tokens += len(processed_ids)
+
+                    # Decode back to text for Megatron preprocessing
+                    processed_text = tokenizer.decode(processed_ids, skip_special_tokens=True)
+
+                    # Write to temp file
+                    output_doc = {args.text_key: processed_text}
+                    outfile.write(json.dumps(output_doc, ensure_ascii=False) + '\n')
+
+                except Exception as e:
+                    print(f"Warning: Error processing line: {e}")
+                    continue
+
+        print()
+        print(f"✓ Created temporary Patok-processed JSONL: {temp_jsonl}")
+        print(f"  Original tokens:   {total_original_tokens:,}")
+        print(f"  Processed tokens:  {total_processed_tokens:,}")
+        if total_original_tokens > 0:
+            ratio = total_processed_tokens / total_original_tokens
+            print(f"  Token ratio:       {ratio:.2%}")
+
+    except Exception as e:
+        print(f"✗ Error during Patok processing: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+    print()
+    print("Running Megatron preprocessing on Patok-processed data...")
+
+    # Now run standard Megatron preprocessing on the processed data
+    preprocess_script = "/opt/megatron-lm/tools/preprocess_data.py"
+
+    if not Path(preprocess_script).exists():
+        print(f"✗ Error: Megatron preprocessing script not found: {preprocess_script}")
+        return 1
+
+    cmd = [
+        "python",
+        preprocess_script,
+        "--input", str(temp_jsonl),
+        "--output-prefix", args.output_prefix,
+        "--tokenizer-type", "HuggingFaceTokenizer",
+        "--tokenizer-model", args.tokenizer_model,
+        "--json-keys", args.text_key,
+        "--workers", str(args.workers),
+        "--append-eod",
+    ]
+
+    print("Running preprocessing command:")
+    print(" ".join(cmd))
+    print()
+
+    try:
+        result = subprocess.run(
+            cmd,
+            check=True,
+            capture_output=False,
+        )
+
+        # Verify output files (Megatron adds _text_document suffix)
+        bin_file_megatron = Path(f"{args.output_prefix}_text_document.bin")
+        idx_file_megatron = Path(f"{args.output_prefix}_text_document.idx")
+
+        if bin_file_megatron.exists() and idx_file_megatron.exists():
+            # Rename files to remove _text_document suffix
+            bin_file = Path(f"{args.output_prefix}.bin")
+            idx_file = Path(f"{args.output_prefix}.idx")
+
+            print()
+            print("=" * 80)
+            print("✓ Patok Preprocessing Complete!")
+            print("=" * 80)
+            print(f"Renaming output files (removing _text_document suffix)...")
+            bin_file_megatron.rename(bin_file)
+            idx_file_megatron.rename(idx_file)
+
+            # Clean up temporary file
+            temp_jsonl.unlink()
+            print(f"✓ Cleaned up temporary file: {temp_jsonl}")
+
+            print(f"Binary file: {bin_file} ({bin_file.stat().st_size / 1e9:.2f} GB)")
+            print(f"Index file:  {idx_file} ({idx_file.stat().st_size / 1e6:.2f} MB)")
+            print()
+            print(f"Patok processing statistics:")
+            print(f"  Original tokens:   {total_original_tokens:,}")
+            print(f"  Processed tokens:  {total_processed_tokens:,}")
+            if total_original_tokens > 0:
+                print(f"  Token ratio:       {total_processed_tokens / total_original_tokens:.2%}")
+            print()
+            print("To use in training, specify:")
+            print(f"  --data-path {args.output_prefix}")
+            print("=" * 80)
+            return 0
+        else:
+            print("✗ Error: Output files not created")
+            if temp_jsonl.exists():
+                temp_jsonl.unlink()
+            return 1
+
+    except subprocess.CalledProcessError as e:
+        print(f"✗ Preprocessing failed with exit code {e.returncode}")
         if temp_jsonl.exists():
             temp_jsonl.unlink()
         return e.returncode
