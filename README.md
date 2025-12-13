@@ -305,15 +305,16 @@ results = evaluate_model(model_name="gpt2", benchmarks=["pacute"])
 
 ---
 
-## Expected Results
+## Baseline Results (Pretrained Models)
 
-| Method | PACUTE Affixation | Hierarchical Level 2 | Improvement |
-|--------|-------------------|---------------------|-------------|
-| **Baseline** | 40-50% | 30-40% | - |
-| **Stochastok** | 50-65% | 45-55% | +10-15% |
-| **Patok** | 60-70% | 55-70% | +20-30% |
+Results on pretrained models before Filipino CPT:
 
-Affix-aware tokenization (Patok) is expected to show the largest improvements on morphological understanding tasks.
+| Model | PACUTE (MCQ) | Hierarchical (MCQ) | LangGame (MCQ) | CUTE (GEN) |
+|-------|--------------|-------------------|----------------|------------|
+| **GPT-2** | 22.6% | 28.9% | 24.5% | 0% exact |
+| **GPT-2-medium** | 23.1% | 28.0% | 24.9% | 0% exact |
+
+*MCQ accuracy near 25% indicates random baseline (4 options). Evaluation of 35 models in progress.*
 
 ---
 
