@@ -127,47 +127,142 @@ Diagnostic tasks across 6 compositional levels to identify where models fail:
 
 ```
 filipino-morphology-llm/
-├── README.md                    # This file
-├── INDEX.md                     # Documentation index
-├── SETUP.md                     # Setup guide
-├── docs/                        # Documentation
-│   ├── RESEARCH.md             # Research overview
-│   ├── TRAINING.md             # Training guide
-│   ├── EVALUATION.md           # Evaluation guide
-│   ├── BENCHMARK_FORMATS.md    # Benchmark format specs
-│   ├── SECURITY.md             # Security best practices
-│   └── GEMMA3_MONKEY_PATCH.md  # Gemma3 bug workarounds
-├── job_templates/               # PBS job templates (sanitized)
-│   ├── README.md               # Template usage guide
-│   ├── setup_jobs.sh           # Interactive setup wizard
+├── README.md                       # This file
+├── CLAUDE.md                       # AI assistant guidance
+├── SETUP.md                        # Environment setup guide
+├── setup.py                        # Package installation
+├── requirements.txt                # Python dependencies
+│
+├── docs/                           # 📚 Documentation
+│   ├── RESEARCH.md                 # Research overview & methods
+│   ├── TRAINING.md                 # Training workflows
+│   ├── EVALUATION.md               # Evaluation guide
+│   ├── BENCHMARK_FORMATS.md        # MCQ vs GEN format specs
+│   ├── SECURITY.md                 # Security best practices
+│   └── GEMMA3_MONKEY_PATCH.md      # Gemma3 bug workarounds
+│
+├── src/                            # 📦 Source Code (importable package)
+│   ├── tokenization/               # Tokenization processors
+│   │   ├── base_processor.py       # Base class with common utilities
+│   │   ├── stochastok_processor.py # Stochastic token expansion
+│   │   ├── patok_processor.py      # Affix-aware expand-contract
+│   │   ├── patok_morphology.py     # Filipino morphology detection
+│   │   └── affix_decomposition.py  # Affix decomposition utilities
+│   │
+│   ├── evaluation/                 # Evaluation framework
+│   │   ├── loaders/                # Benchmark loaders (registry pattern)
+│   │   │   ├── registry.py         # @register_loader decorator
+│   │   │   ├── pacute.py           # PACUTE benchmark loader
+│   │   │   ├── hierarchical.py     # Hierarchical benchmark loader
+│   │   │   ├── cute.py             # CUTE benchmark loader
+│   │   │   ├── langgame.py         # LangGame benchmark loader
+│   │   │   └── multi_digit_addition.py
+│   │   ├── datasets/               # Dataset generation
+│   │   │   ├── generators/         # Task generators by category
+│   │   │   │   ├── affixation.py
+│   │   │   │   ├── composition.py
+│   │   │   │   ├── manipulation.py
+│   │   │   │   ├── syllabification.py
+│   │   │   │   ├── stress.py
+│   │   │   │   └── hierarchical.py
+│   │   │   └── scripts/            # Benchmark generation scripts
+│   │   ├── evaluators/             # Evaluation logic
+│   │   │   ├── mcq_evaluator.py    # Log-probability MCQ scoring
+│   │   │   ├── hierarchical.py     # Hierarchical evaluation
+│   │   │   └── math_evaluator.py   # Math task evaluation
+│   │   ├── metrics/                # Evaluation metrics
+│   │   └── utils/                  # Utilities (constants, strings, syllabification)
+│   │
+│   └── analysis/                   # Analysis tools
+│       ├── tokenization/           # Tokenizer comparison & analysis
+│       ├── affixes/                # Affix coverage analysis
+│       ├── datasets/               # Dataset comparison
+│       ├── morphological_metrics.py
+│       └── information_theory.py
+│
+├── training/                       # 🏋️ Training Pipelines
+│   ├── nemo/                       # NeMo Framework CPT (ACTIVE)
+│   │   ├── run_cpt.py              # Main training script
+│   │   ├── data/                   # Data preprocessing
+│   │   │   ├── preprocess_data.py  # JSONL → Megatron binary
+│   │   │   ├── split_jsonl.py      # Split corpus into chunks
+│   │   │   └── DATA_PREPROCESSING.md
+│   │   ├── setup/                  # Container setup scripts
+│   │   │   ├── setup_enroot.sh     # Enroot container setup
+│   │   │   └── setup_singularity.sh
+│   │   └── examples/               # Example configurations
+│   │
+│   └── stochastok/                 # ⚠️ DEPRECATED - Legacy GPT-2 training
+│       └── DEPRECATED.md           # See this file for details
+│
+├── scripts/                        # 🔧 Utility Scripts
+│   ├── generate_benchmarks.py      # Generate all evaluation benchmarks
+│   ├── run_evaluation.py           # Run model evaluation
+│   ├── run_full_evaluation.sh      # Comprehensive evaluation script
+│   ├── analyze_inference_results.py# Analyze evaluation outputs
+│   ├── download_seapile.py         # Download SEA-PILE corpus
+│   └── verify_setup.py             # Verify environment setup
+│
+├── data/                           # 📊 Data Files
+│   ├── benchmarks/                 # Generated benchmarks (JSONL)
+│   │   ├── affixation_mcq.jsonl
+│   │   ├── affixation_gen.jsonl
+│   │   ├── composition_mcq.jsonl
+│   │   ├── hierarchical_mcq.jsonl
+│   │   └── ...
+│   ├── affixes/                    # Filipino affix lists
+│   │   └── filipino_affixes.txt
+│   ├── corpora/                    # Training corpora (gitignored)
+│   │   └── pacute_data/            # PACUTE source data
+│   ├── tokenizer_expansions/       # Cached tokenizer expansions
+│   ├── vocabularies/               # Tokenizer vocabularies
+│   └── word_frequencies.csv        # Filipino word frequencies
+│
+├── configs/                        # ⚙️ Training Configurations
+│   ├── pretraining.yaml            # Pretraining config
+│   └── instruction_tuning.yaml     # Instruction tuning config
+│
+├── job_templates/                  # 📝 PBS Job Templates
+│   ├── README.md                   # Template usage guide
+│   ├── setup_jobs.sh               # Interactive setup wizard
 │   ├── run_cpt.template.pbs
-│   ├── run_evaluation_batch.template.pbs
 │   ├── preprocess_data.template.pbs
-│   └── submit_parallel_evaluation.template.sh
-├── data/                        # Data files
-│   ├── benchmarks/             # Evaluation benchmarks (JSONL)
-│   ├── chunks/                 # Preprocessed chunks
-│   └── processed/              # Binary format data
-├── src/                         # Source code
-│   ├── evaluation/             # Benchmark generators & evaluators
-│   └── tokenization/           # Tokenization processors
-│       ├── stochastok_processor.py
-│       └── patok_processor.py
-├── training/                    # Training code
-│   ├── nemo/                   # NeMo CPT (current focus)
-│   │   ├── run_cpt.py          # Main training script
-│   │   ├── setup/              # Setup scripts
-│   │   └── data/               # Data preprocessing
-│   │       └── DATA_PREPROCESSING.md
-│   └── stochastok/             # Small-scale training (GPT-2)
-├── jobs/                        # PBS job scripts (local, gitignored)
-│   └── *.pbs                   # Created from templates
-└── scripts/                     # Utility scripts
-    ├── generate_benchmarks.py      # Generate benchmarks
-    ├── run_evaluation.py           # Evaluate models
-    ├── submit_parallel_eval.sh     # Parallel evaluation
-    └── analyze_inference_results.py # Analyze results
+│   └── ...
+│
+├── jobs/                           # Generated PBS jobs (gitignored)
+│
+├── notebooks/                      # 📓 Jupyter Notebooks
+│   ├── create_affixation.ipynb     # Affixation task development
+│   ├── create_composition_*.ipynb  # Composition/manipulation tasks
+│   └── diksiyonaryo.ipynb          # Dictionary exploration
+│
+├── tests/                          # 🧪 Test Files
+│   ├── test_affixation.py
+│   ├── test_composition.py
+│   ├── test_manipulation.py
+│   ├── test_syllabification.py
+│   └── test_patok_morphology.py
+│
+└── results/                        # 📈 Evaluation Results (gitignored)
+    └── <model_name>/
+        ├── evaluation_results_*.json
+        └── inference/*.jsonl
 ```
+
+### Directory Purposes
+
+| Directory | Purpose |
+|-----------|---------|
+| `src/tokenization/` | Core tokenization processors (Stochastok, Patok) |
+| `src/evaluation/` | Benchmark loading, generation, and evaluation |
+| `src/analysis/` | Analysis tools for tokenization and morphology |
+| `training/nemo/` | NeMo Framework training (Gemma 3 1B CPT) |
+| `scripts/` | Command-line utilities for benchmarks and evaluation |
+| `data/benchmarks/` | Generated evaluation tasks in JSONL format |
+| `data/affixes/` | Filipino affix lists for Patok processor |
+| `job_templates/` | PBS job templates (version-controlled) |
+| `jobs/` | Generated PBS jobs with real paths (gitignored) |
+| `results/` | Model evaluation outputs (gitignored) |
 
 ---
 
@@ -223,9 +318,9 @@ If you use this code or benchmarks, please cite:
 ```bibtex
 @misc{filipino-morphology-llm,
   title={Affix-Aware Tokenization for Filipino Morphological Understanding},
-  author={Your Name},
+  author={Africa, David Demitri and Montalan, Railey and Gamboa, Lance Calvin},
   year={2025},
-  url={https://github.com/yourusername/filipino-morphology-llm}
+  url={https://github.com/DavidDemitriAfrica/filipino-morphology-llm}
 }
 ```
 
@@ -240,8 +335,8 @@ MIT License - See [LICENSE](LICENSE) for details.
 ## Contact
 
 For questions or collaboration:
-- Create an issue on GitHub
-- Email: your.email@example.com
+- Create an issue on [GitHub](https://github.com/DavidDemitriAfrica/filipino-morphology-llm/issues)
+- Email: raileymontalan@outlook.com
 
 ---
 

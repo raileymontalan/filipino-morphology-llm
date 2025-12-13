@@ -29,32 +29,50 @@ MODEL_CONFIGS = {
     "gpt2": ("gpt2", "pt"),
     "gpt2-medium": ("gpt2-medium", "pt"),
     "gpt2-large": ("gpt2-large", "pt"),
+    "gpt2-xl": ("gpt2-xl", "pt"),
 
-    # Gemma
+    # Gemma (original)
     "gemma-2b": ("google/gemma-2b", "pt"),
     "gemma-2b-it": ("google/gemma-2b-it", "it"),
     "gemma-7b": ("google/gemma-7b", "pt"),
     "gemma-7b-it": ("google/gemma-7b-it", "it"),
 
-    # Llama
+    # Gemma 2 (newer, larger models)
+    "gemma-2-2b": ("google/gemma-2-2b", "pt"),
+    "gemma-2-2b-it": ("google/gemma-2-2b-it", "it"),
+    "gemma-2-9b": ("google/gemma-2-9b", "pt"),
+    "gemma-2-9b-it": ("google/gemma-2-9b-it", "it"),
+
+    # Llama 3.2 (smaller models)
     "llama-3.2-1b": ("meta-llama/Llama-3.2-1B", "pt"),
     "llama-3.2-1b-it": ("meta-llama/Llama-3.2-1B-Instruct", "it"),
     "llama-3.2-3b": ("meta-llama/Llama-3.2-3B", "pt"),
     "llama-3.2-3b-it": ("meta-llama/Llama-3.2-3B-Instruct", "it"),
 
-    # Qwen
+    # Llama 3.1 (larger models)
+    "llama-3.1-8b": ("meta-llama/Llama-3.1-8B", "pt"),
+    "llama-3.1-8b-it": ("meta-llama/Llama-3.1-8B-Instruct", "it"),
+
+    # Qwen 2.5 (full range up to 14B)
     "qwen-2.5-0.5b": ("Qwen/Qwen2.5-0.5B", "pt"),
     "qwen-2.5-0.5b-it": ("Qwen/Qwen2.5-0.5B-Instruct", "it"),
     "qwen-2.5-1.5b": ("Qwen/Qwen2.5-1.5B", "pt"),
     "qwen-2.5-1.5b-it": ("Qwen/Qwen2.5-1.5B-Instruct", "it"),
     "qwen-2.5-3b": ("Qwen/Qwen2.5-3B", "pt"),
     "qwen-2.5-3b-it": ("Qwen/Qwen2.5-3B-Instruct", "it"),
+    "qwen-2.5-7b": ("Qwen/Qwen2.5-7B", "pt"),
+    "qwen-2.5-7b-it": ("Qwen/Qwen2.5-7B-Instruct", "it"),
+    "qwen-2.5-14b": ("Qwen/Qwen2.5-14B", "pt"),
+    "qwen-2.5-14b-it": ("Qwen/Qwen2.5-14B-Instruct", "it"),
 
-    # GPT-OSS (OpenGPT models - alternative open source GPT implementations)
+    # GPT-OSS (Cerebras GPT - open source GPT implementations)
     "cerebras-gpt-111m": ("cerebras/Cerebras-GPT-111M", "pt"),
     "cerebras-gpt-256m": ("cerebras/Cerebras-GPT-256M", "pt"),
     "cerebras-gpt-590m": ("cerebras/Cerebras-GPT-590M", "pt"),
     "cerebras-gpt-1.3b": ("cerebras/Cerebras-GPT-1.3B", "pt"),
+    "cerebras-gpt-2.7b": ("cerebras/Cerebras-GPT-2.7B", "pt"),
+    "cerebras-gpt-6.7b": ("cerebras/Cerebras-GPT-6.7B", "pt"),
+    "cerebras-gpt-13b": ("cerebras/Cerebras-GPT-13B", "pt"),
 }
 
 
@@ -91,7 +109,11 @@ class HuggingFaceEvaluator:
         )
         self.model.eval()
 
-        print(f"Model loaded successfully")
+        # Get the device of the first model parameter for proper tensor placement
+        # This is needed when using device_map="auto" which distributes model across GPUs
+        self.input_device = next(self.model.parameters()).device
+
+        print(f"Model loaded successfully (input device: {self.input_device})")
 
     def compute_logprob(self, prefix, continuation):
         """
@@ -119,8 +141,8 @@ class HuggingFaceEvaluator:
         if len(continuation_tokens) == 0:
             return -100.0  # Very low probability for empty continuation
 
-        # Convert to tensors
-        input_ids = torch.tensor([full_tokens]).to(self.device)
+        # Convert to tensors - use input_device for multi-GPU compatibility
+        input_ids = torch.tensor([full_tokens]).to(self.input_device)
 
         # Get logits
         with torch.no_grad():
@@ -178,7 +200,7 @@ class HuggingFaceEvaluator:
 
         # Tokenize input
         input_ids = self.tokenizer.encode(prefix, add_special_tokens=True, return_tensors="pt")
-        input_ids = input_ids.to(self.device)
+        input_ids = input_ids.to(self.input_device)
 
         # Generate
         with torch.no_grad():

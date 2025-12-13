@@ -6,6 +6,18 @@ import numpy as np
 from .base_processor import TokenizerProcessor
 
 
+def get_project_root():
+    """Get the project root directory."""
+    current_file = os.path.abspath(__file__)
+    # src/tokenization/patok_processor.py -> src/tokenization -> src -> project_root
+    return os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+
+
+def get_file_path(relative_path):
+    """Resolve a path relative to the project root."""
+    return os.path.join(get_project_root(), relative_path)
+
+
 # Helper functions for file operations
 def load_json_dict(filepath, convert_tuple_keys=False):
     """Load a JSON dictionary from file with optional tuple key conversion."""

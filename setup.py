@@ -9,12 +9,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="filipino-morphology-llm",
     version="0.1.0",
-    author="[Authors]",
-    author_email="[Email]",
+    author="David Demitri Africa, Railey Montalan, Lance Calvin Gamboa",
+    author_email="raileymontalan@outlook.com",
     description="Morphologically-aware tokenization and evaluation for Filipino and low-resource languages",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/[username]/filipino-morphology-llm",
+    url="https://github.com/DavidDemitriAfrica/filipino-morphology-llm",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     classifiers=[

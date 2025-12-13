@@ -43,9 +43,6 @@ class StochastokProcessor(TokenizerProcessor):
                 chosen_expansion = random.choice(possible_expansions)
                 token_ids = token_ids[:idx] + list(chosen_expansion) + token_ids[idx+1:]
                 num_expanded += 1
-        # print(f"Attempted to expand {num_to_expand}, expanded {num_expanded}")
-        # print(f"Original length {len(token_ids)-num_expanded}, new length {len(token_ids)}")
-        # print(f"Attempted to expand by {expand_prop*100}%, expanded by {num_expanded/len(token_ids)*100:.2f}%")
         return token_ids
 
     def set_expansions(self):
@@ -96,13 +93,12 @@ class StochastokProcessor(TokenizerProcessor):
             if len(token_as_bytes) <= 1:
                 continue
             else:
-                # print(f"{i=}: {token_as_bytes.decode('utf-8')}")
                 num_merges = 0
-                ## split the token at each possible point and find a split/"merge" where both parts are already present earlier in the vocab.
+                # Split the token at each possible point and find a split/"merge"
+                # where both parts are already present earlier in the vocab.
                 for j in range(1, len(token_as_bytes)):
                     first_part = token_as_bytes[:j]
                     second_part = token_as_bytes[j:]
-                    # print(f"{j=}: {first_part.decode('utf-8')} + {second_part.decode('utf-8')}")
                     if tuple(first_part) in ttokenizer_tokens_as_tuples and tuple(second_part) in ttokenizer_tokens_as_tuples:
                         first_part_id = ttokenizer_byt2int[first_part]
                         second_part_id = ttokenizer_byt2int[second_part]
