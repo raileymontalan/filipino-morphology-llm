@@ -63,8 +63,14 @@ def parse_args():
     parser.add_argument(
         "--tokenizer-model",
         type=str,
-        default="google/gemma-3-1b-pt",
-        help="HuggingFace tokenizer model name",
+        default="/workspace/data/tokenizer/gemma2_tokenizer.model",
+        help="Path to SentencePiece tokenizer.model file",
+    )
+    parser.add_argument(
+        "--hf-tokenizer",
+        type=str,
+        default="google/gemma-2-2b",
+        help="HuggingFace tokenizer name for stochastok/patok modes",
     )
     parser.add_argument(
         "--text-key",
@@ -195,13 +201,13 @@ def preprocess_vanilla(args, input_path):
     print()
     
     # Build the preprocessing command for Megatron-LM
-    # Use HuggingFaceTokenizer with --tokenizer-model parameter
+    # Use SentencePieceTokenizer with local tokenizer.model file
     cmd = [
         "python",
         preprocess_script,
         "--input", str(input_path),
         "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "HuggingFaceTokenizer",
+        "--tokenizer-type", "SentencePieceTokenizer",
         "--tokenizer-model", args.tokenizer_model,
         "--json-keys", args.text_key,
         "--workers", str(args.workers),
@@ -274,22 +280,39 @@ def preprocess_stochastok(args, input_path):
     print("Loading tokenizer...")
     try:
         from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_model)
-        print(f"✓ Loaded tokenizer: {args.tokenizer_model}")
+        tokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
+        print(f"✓ Loaded tokenizer: {args.hf_tokenizer}")
         print(f"  Vocab size: {tokenizer.vocab_size}")
     except Exception as e:
         print(f"✗ Error loading tokenizer: {e}")
         return 1
-    
+
     print()
     print("Initializing StochastokProcessor...")
     
     # Import StochastokProcessor
     try:
         import sys
-        sys.path.insert(0, "/workspace/src/tokenization")
-        from stochastok_processor import StochastokProcessor
-        
+        import subprocess
+
+        # Install dependencies if needed
+        missing_deps = []
+        try:
+            import ahocorasick
+        except ImportError:
+            missing_deps.append("pyahocorasick")
+        try:
+            import tiktoken
+        except ImportError:
+            missing_deps.append("tiktoken")
+        if missing_deps:
+            print(f"Installing missing dependencies: {', '.join(missing_deps)}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing_deps + ["-q"])
+
+        # Add src to path for proper imports
+        sys.path.insert(0, "/workspace/src")
+        from tokenization.stochastok_processor import StochastokProcessor
+
         processor = StochastokProcessor(tokenizer, expand_prop=args.expand_prop)
         print(f"✓ StochastokProcessor initialized")
         print(f"  Number of expandable tokens: {len(processor.expansions)}")
@@ -375,33 +398,33 @@ def preprocess_stochastok(args, input_path):
         preprocess_script,
         "--input", str(temp_jsonl),
         "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "HuggingFaceTokenizer",
+        "--tokenizer-type", "SentencePieceTokenizer",
         "--tokenizer-model", args.tokenizer_model,
         "--json-keys", args.text_key,
         "--workers", str(args.workers),
         "--append-eod",
     ]
-    
+
     print("Running preprocessing command:")
     print(" ".join(cmd))
     print()
-    
+
     try:
         result = subprocess.run(
             cmd,
             check=True,
             capture_output=False,
         )
-        
+
         # Verify output files (Megatron adds _text_document suffix)
         bin_file_megatron = Path(f"{args.output_prefix}_text_document.bin")
         idx_file_megatron = Path(f"{args.output_prefix}_text_document.idx")
-        
+
         if bin_file_megatron.exists() and idx_file_megatron.exists():
             # Rename files to remove _text_document suffix for simpler usage
             bin_file = Path(f"{args.output_prefix}.bin")
             idx_file = Path(f"{args.output_prefix}.idx")
-            
+
             print()
             print("=" * 80)
             print("✓ Stochastok Preprocessing Complete!")
@@ -409,11 +432,11 @@ def preprocess_stochastok(args, input_path):
             print(f"Renaming output files (removing _text_document suffix)...")
             bin_file_megatron.rename(bin_file)
             idx_file_megatron.rename(idx_file)
-            
+
             # Clean up temporary file
             temp_jsonl.unlink()
             print(f"✓ Cleaned up temporary file: {temp_jsonl}")
-            
+
             print(f"Binary file: {bin_file} ({bin_file.stat().st_size / 1e9:.2f} GB)")
             print(f"Index file:  {idx_file} ({idx_file.stat().st_size / 1e6:.2f} MB)")
             print()
@@ -432,7 +455,7 @@ def preprocess_stochastok(args, input_path):
             if temp_jsonl.exists():
                 temp_jsonl.unlink()
             return 1
-            
+
     except subprocess.CalledProcessError as e:
         print(f"✗ Preprocessing failed with exit code {e.returncode}")
         # Clean up temporary file
@@ -462,8 +485,8 @@ def preprocess_patok(args, input_path):
     print("Loading tokenizer...")
     try:
         from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_model)
-        print(f"✓ Loaded tokenizer: {args.tokenizer_model}")
+        tokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
+        print(f"✓ Loaded tokenizer: {args.hf_tokenizer}")
         print(f"  Vocab size: {tokenizer.vocab_size}")
     except Exception as e:
         print(f"✗ Error loading tokenizer: {e}")
@@ -475,8 +498,9 @@ def preprocess_patok(args, input_path):
     # Import MorphologyAwarePatokProcessor
     try:
         import sys
-        sys.path.insert(0, "/workspace/src/tokenization")
-        from patok_morphology import MorphologyAwarePatokProcessor
+        # Add src to path for proper imports
+        sys.path.insert(0, "/workspace/src")
+        from tokenization.patok_morphology import MorphologyAwarePatokProcessor
 
         # Verify affix files exist
         from pathlib import Path
@@ -587,7 +611,7 @@ def preprocess_patok(args, input_path):
         preprocess_script,
         "--input", str(temp_jsonl),
         "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "HuggingFaceTokenizer",
+        "--tokenizer-type", "SentencePieceTokenizer",
         "--tokenizer-model", args.tokenizer_model,
         "--json-keys", args.text_key,
         "--workers", str(args.workers),

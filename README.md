@@ -24,13 +24,14 @@ We compare three tokenization approaches:
 ```bash
 # Configure
 cp .env.example .env
-nano .env  # Add: HF_TOKEN, WANDB_API_KEY, ENROOT_PATH, etc.
+nano .env  # Add: HF_TOKEN, WANDB_API_KEY
 source .env
 
-# Install container (~15 minutes)
-bash training/nemo/setup/setup_enroot.sh
+# Option A: Docker (recommended for cloud/local)
+docker pull nvcr.io/nvidia/nemo:24.07
 
-# Verify
+# Option B: Enroot (for HPC clusters)
+bash training/nemo/setup/setup_enroot.sh
 enroot list | grep nemo_framework
 ```
 
@@ -39,11 +40,13 @@ See **[SETUP.md](SETUP.md)** for detailed setup instructions.
 ### 2. Preprocess Data
 
 ```bash
-# Test first
-qsub jobs/preprocess_test_chunk1.pbs
+# Download SEA-PILE v2 Filipino corpus
+python scripts/download_seapile.py
 
-# Full preprocessing (parallel, faster)
-qsub -J 1-20 jobs/preprocess_data_parallel.pbs
+# Preprocess for each tokenization mode (parallel, ~1hr each)
+bash scripts/preprocess_all_vanilla.sh     # Baseline BPE
+bash scripts/preprocess_all_stochastok.sh  # Stochastok expansion
+bash scripts/preprocess_all_patok.sh       # Patok morphology-aware
 ```
 
 See **[training/nemo/data/DATA_PREPROCESSING.md](training/nemo/data/DATA_PREPROCESSING.md)** for complete preprocessing guide.
