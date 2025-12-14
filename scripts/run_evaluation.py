@@ -81,8 +81,9 @@ MODEL_CONFIGS = {
     "cerebras-gpt-590m": ("cerebras/Cerebras-GPT-590M", "pt"),
     "cerebras-gpt-1.3b": ("cerebras/Cerebras-GPT-1.3B", "pt"),
     "cerebras-gpt-2.7b": ("cerebras/Cerebras-GPT-2.7B", "pt"),
-    "cerebras-gpt-6.7b": ("cerebras/Cerebras-GPT-6.7B", "pt"),
-    "cerebras-gpt-13b": ("cerebras/Cerebras-GPT-13B", "pt"),
+    # Skipped - too large (50GB+ each):
+    # "cerebras-gpt-6.7b": ("cerebras/Cerebras-GPT-6.7B", "pt"),
+    # "cerebras-gpt-13b": ("cerebras/Cerebras-GPT-13B", "pt"),
 }
 
 

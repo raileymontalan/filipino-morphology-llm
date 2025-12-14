@@ -307,26 +307,50 @@ results = evaluate_model(model_name="gpt2", benchmarks=["pacute"])
 
 ## Baseline Results (Pretrained Models)
 
-Results on pretrained models before Filipino CPT:
+Results on 31 pretrained models before Filipino CPT, sorted by PACUTE accuracy:
 
-| Model | Params | PACUTE | Hierarchical | LangGame | CUTE | Math |
-|-------|--------|--------|--------------|----------|------|------|
-| **GPT-2** | 124M | 22.6% | 28.9% | 24.5% | 23.2% | 0% |
-| **GPT-2-medium** | 355M | 23.1% | 28.0% | 24.9% | 20.4% | 0% |
-| **GPT-2-large** | 774M | 23.5% | 28.0% | 25.0% | 30.3% | 0% |
-| **GPT-2-xl** | 1.5B | 25.9% | 25.7% | 26.4% | 28.4% | 0% |
-| **Qwen2.5-0.5B** | 0.5B | 27.6% | 27.9% | 36.2% | 30.2% | 19.0% |
-| **Qwen2.5-0.5B-Instruct** | 0.5B | 29.8% | 26.9% | 37.8% | 34.1% | 26.1% |
-| **Qwen2.5-1.5B** | 1.5B | 30.3% | 28.0% | 40.7% | 55.3% | 74.3% |
-| **Qwen2.5-1.5B-Instruct** | 1.5B | 28.2% | 27.7% | 42.3% | 39.0% | 62.4% |
-| **Qwen2.5-3B** | 3B | 34.5% | 27.0% | 46.7% | 41.8% | 64.4% |
-| **Qwen2.5-3B-Instruct** | 3B | 35.4% | 28.4% | 57.0% | 28.8% | 64.3% |
-| **Qwen2.5-7B** | 7B | 39.6% | 28.0% | 63.5% | 65.1% | 53.6% |
-| **Qwen2.5-7B-Instruct** | 7B | 42.3% | 27.4% | 68.3% | 43.2% | 83.5% |
-| **Qwen2.5-14B** | 14B | 37.9% | 27.0% | 65.0% | 74.1% | 69.7% |
-| **Qwen2.5-14B-Instruct** | 14B | 39.2% | 27.4% | 76.7% | 69.2% | 92.0% |
+| Model | Type | PACUTE | Hier. | LangGame | CUTE | Math |
+|-------|------|--------|-------|----------|------|------|
+| **SEA-LION-Gemma-v3-9B-IT** | IT | 43.7% | 27.9% | 80.4% | 72.1% | 97.6% |
+| **Qwen2.5-7B-Instruct** | IT | 42.3% | 27.4% | 68.3% | 43.2% | 83.5% |
+| **SEA-LION-v3-8B-IT** | IT | 40.8% | 27.9% | 65.6% | 71.0% | 93.4% |
+| **Qwen2.5-7B** | PT | 39.6% | 28.0% | 63.5% | 65.1% | 53.6% |
+| **Qwen2.5-14B-Instruct** | IT | 39.2% | 27.4% | 76.7% | 69.2% | 92.0% |
+| **Qwen2.5-14B** | PT | 37.9% | 27.0% | 65.0% | 74.1% | 69.7% |
+| **LLaMA-3.1-8B-Instruct** | IT | 37.2% | 27.5% | 62.2% | 69.4% | 97.5% |
+| **SEA-LION-Gemma-v3-9B** | PT | 36.3% | 27.9% | 45.6% | 60.4% | 97.6% |
+| **LLaMA-3.1-8B** | PT | 35.5% | 27.4% | 38.9% | 68.2% | 94.9% |
+| **LLaMA-3.2-1B-Instruct** | IT | 35.5% | 27.2% | 33.3% | 46.6% | 59.3% |
+| **Qwen2.5-3B-Instruct** | IT | 35.4% | 28.4% | 57.0% | 28.8% | 64.3% |
+| **LLaMA-3.2-3B-Instruct** | IT | 35.3% | 25.7% | 58.4% | 59.2% | 93.7% |
+| **SEA-LION-v3-8B** | PT | 35.3% | 27.9% | 49.3% | 58.0% | 97.2% |
+| **Qwen2.5-3B** | PT | 34.5% | 27.0% | 46.7% | 41.8% | 64.4% |
+| **Gemma-7B-Instruct** | IT | 34.0% | 26.5% | 54.6% | 49.0% | 37.4% |
+| **LLaMA-3.2-1B** | PT | 33.2% | 27.5% | 32.5% | 51.0% | 17.0% |
+| **Qwen3-4B-Instruct** | IT | 30.3% | 28.9% | 61.0% | 22.8% | 16.6% |
+| **Qwen2.5-1.5B** | PT | 30.3% | 28.0% | 40.7% | 55.3% | 74.3% |
+| **Gemma-7B** | PT | 30.2% | 25.7% | 59.4% | 66.5% | 97.1% |
+| **LLaMA-3.2-3B** | PT | 30.2% | 26.7% | 37.7% | 58.9% | 80.9% |
+| **Gemma-2-2B-Instruct** | IT | 30.1% | 28.5% | 51.5% | 27.5% | 38.1% |
+| **Qwen2.5-0.5B-Instruct** | IT | 29.8% | 26.9% | 37.8% | 34.1% | 26.1% |
+| **Gemma-2B-Instruct** | IT | 29.2% | 26.7% | 40.9% | 36.2% | 7.3% |
+| **Qwen3-4B-Thinking** | IT | 28.7% | 27.9% | 52.8% | 43.3% | 88.4% |
+| **Qwen2.5-1.5B-Instruct** | IT | 28.2% | 27.7% | 42.3% | 39.0% | 62.4% |
+| **Gemma-2B** | PT | 27.8% | 26.2% | 32.1% | 50.6% | 91.6% |
+| **Qwen2.5-0.5B** | PT | 27.6% | 27.9% | 36.2% | 30.2% | 19.0% |
+| **GPT-2-xl** | PT | 25.9% | 25.7% | 26.4% | 28.4% | 0.0% |
+| **GPT-2-large** | PT | 23.5% | 28.0% | 25.0% | 30.3% | 0.0% |
+| **GPT-2-medium** | PT | 23.1% | 28.0% | 24.9% | 20.4% | 0.0% |
+| **GPT-2** | PT | 22.6% | 28.9% | 24.5% | 23.2% | 0.0% |
 
-*MCQ benchmarks (PACUTE, Hierarchical, LangGame): 25% = random baseline (4 options). CUTE and Math: contains-match accuracy. Evaluation in progress.*
+**Key Findings:**
+- **SEA-LION models excel on Filipino morphology** - trained on Southeast Asian languages including Filipino
+- **PACUTE scales with model size** - 22.6% (GPT-2 124M) → 43.7% (SEA-LION 9B)
+- **Hierarchical remains flat** - ~26-29% across all models (near 25% random baseline)
+- **LangGame shows strong scaling** - 24.5% → 80.4%
+- **Math: LLaMA/SEA-LION dominate** - 90%+ vs GPT-2's 0%
+
+*MCQ benchmarks (PACUTE, Hierarchical, LangGame): 25% = random baseline (4 options). CUTE and Math: contains-match accuracy.*
 
 ---
 

@@ -46,7 +46,7 @@ done
 
 # Cerebras GPT-OSS models (all PT)
 echo "=== Cerebras GPT-OSS Family ===" | tee -a "$LOG_FILE"
-for model in cerebras-gpt-111m cerebras-gpt-256m cerebras-gpt-590m cerebras-gpt-1.3b cerebras-gpt-2.7b cerebras-gpt-6.7b cerebras-gpt-13b; do
+for model in cerebras-gpt-111m cerebras-gpt-256m cerebras-gpt-590m cerebras-gpt-1.3b cerebras-gpt-2.7b; do
     run_eval "$model"
 done
 
