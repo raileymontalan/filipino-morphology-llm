@@ -53,6 +53,12 @@ MODEL_CONFIGS = {
     "llama-3.1-8b": ("meta-llama/Llama-3.1-8B", "pt"),
     "llama-3.1-8b-it": ("meta-llama/Llama-3.1-8B-Instruct", "it"),
 
+    # SEA-LION v3 (Southeast Asian language models)
+    "sea-lion-v3-8b": ("aisingapore/Llama-SEA-LION-v3-8B", "pt"),
+    "sea-lion-v3-8b-it": ("aisingapore/Llama-SEA-LION-v3-8B-IT", "it"),
+    "sea-lion-gemma-v3-9b": ("aisingapore/Gemma-SEA-LION-v3-9B", "pt"),
+    "sea-lion-gemma-v3-9b-it": ("aisingapore/Gemma-SEA-LION-v3-9B-IT", "it"),
+
     # Qwen 2.5 (full range up to 14B)
     "qwen-2.5-0.5b": ("Qwen/Qwen2.5-0.5B", "pt"),
     "qwen-2.5-0.5b-it": ("Qwen/Qwen2.5-0.5B-Instruct", "it"),
@@ -64,6 +70,10 @@ MODEL_CONFIGS = {
     "qwen-2.5-7b-it": ("Qwen/Qwen2.5-7B-Instruct", "it"),
     "qwen-2.5-14b": ("Qwen/Qwen2.5-14B", "pt"),
     "qwen-2.5-14b-it": ("Qwen/Qwen2.5-14B-Instruct", "it"),
+
+    # Qwen 3 (4B models)
+    "qwen3-4b-it": ("Qwen/Qwen3-4B-Instruct-2507", "it"),
+    "qwen3-4b-thinking": ("Qwen/Qwen3-4B-Thinking-2507", "it"),
 
     # GPT-OSS (Cerebras GPT - open source GPT implementations)
     "cerebras-gpt-111m": ("cerebras/Cerebras-GPT-111M", "pt"),
