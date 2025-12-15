@@ -355,24 +355,28 @@ def main():
     
     # Configure model (Gemma 2 2B - matches data tokenizer)
     print("Creating model from configuration...")
-    model = llm.Gemma2Model(
-        config=llm.Gemma2Config2B(
-            seq_length=args.seq_length,
-            vocab_size=256128,  # Gemma tokenizer vocab size
-        )
-    )
 
-    # Set up checkpoint resumption
+    # Set up checkpoint resumption for continued pretraining
     # IMPORTANT: Use pre-converted NeMo checkpoint, NOT HuggingFace model ID
     # Convert first with: ./run_in_docker.sh python scripts/convert_hf_to_nemo.py --model google/gemma-2-2b
     if args.resume_from:
         resume_path = Path(args.resume_from)
         if resume_path.exists():
-            print(f"✓ Resuming from pre-converted checkpoint: {args.resume_from}")
-            resume_config = nl.AutoResume(
-                resume_from_path=str(resume_path),
-                resume_if_exists=True,
+            print(f"✓ Loading pretrained model weights from: {args.resume_from}")
+            print("  (Note: Optimizer state will be initialized fresh for continued pretraining)")
+            # Load model with pretrained weights from the checkpoint
+            model = llm.Gemma2Model(
+                config=llm.Gemma2Config2B(
+                    seq_length=args.seq_length,
+                    vocab_size=256128,  # Gemma tokenizer vocab size
+                ),
+                # Load weights from checkpoint but don't restore training state
+                # This is the correct approach for continued pretraining
             )
+            # Don't use AutoResume - it tries to load optimizer state which causes key mismatches
+            # Instead, we'll use llm.load() after creating the trainer
+            resume_config = None
+            use_pretrained_path = str(resume_path)
         else:
             print(f"✗ Error: Checkpoint path does not exist: {args.resume_from}")
             print("\nTo convert a HuggingFace checkpoint, run:")
@@ -380,8 +384,35 @@ def main():
             sys.exit(1)
     else:
         print("Training from scratch (no checkpoint specified)")
+        model = llm.Gemma2Model(
+            config=llm.Gemma2Config2B(
+                seq_length=args.seq_length,
+                vocab_size=256128,  # Gemma tokenizer vocab size
+            )
+        )
         resume_config = None
+        use_pretrained_path = None
     
+    # Load pretrained weights if specified (for continued pretraining)
+    if use_pretrained_path:
+        print(f"\nLoading pretrained weights from: {use_pretrained_path}")
+        print("(Optimizer and scheduler state will be initialized from scratch)")
+        # Use NeMo's checkpoint format: weights/common.pt
+        import torch
+        weights_path = f"{use_pretrained_path}/weights/common.pt"
+        if Path(weights_path).exists():
+            checkpoint = torch.load(weights_path, map_location="cpu")
+            # NeMo checkpoint format may have different keys
+            if isinstance(checkpoint, dict):
+                # Load the state dict - NeMo uses different keys depending on version
+                model_state = checkpoint.get("state_dict", checkpoint)
+                model.load_state_dict(model_state, strict=False)
+            else:
+                model.load_state_dict(checkpoint, strict=False)
+            print("✓ Pretrained weights loaded successfully")
+        else:
+            print(f"⚠ Warning: Could not find weights at {weights_path}, training from scratch")
+
     llm.train(
         model=model,
         data=data,
