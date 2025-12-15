@@ -299,11 +299,13 @@ def main():
     )
     
     # Checkpoint configuration
+    # NOTE: Checkpoints are 30-35GB each with distributed optimizer state
+    # Save every 1000 steps to avoid filling disk
     print(f"Checkpoints will be saved to: {args.checkpoint_dir}")
     checkpoint_callback = nl.ModelCheckpoint(
-        save_top_k=2,
+        save_top_k=1,  # Only keep 1 best checkpoint (saves space)
         monitor="val_loss",
-        save_last=True,
+        save_last=False,  # Don't save last checkpoint (avoids frequent saves)
         every_n_train_steps=args.checkpoint_interval,
         dirpath=args.checkpoint_dir,
         # Note: train_time_interval conflicts with every_n_train_steps, use only one

@@ -76,7 +76,7 @@ if [ "$TEST_MODE" = "test" ]; then
     WARMUP_STEPS=10
     echo "*** TEST MODE: Running 100 steps only ***"
 else
-    CHECKPOINT_INTERVAL=500
+    CHECKPOINT_INTERVAL=1000  # Save every 1000 steps (checkpoints are 30-35GB each)
     WARMUP_STEPS=100
 fi
 
