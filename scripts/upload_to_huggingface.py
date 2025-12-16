@@ -128,6 +128,8 @@ print(tokenizer.decode(outputs[0], skip_special_tokens=True))
   author={{Africa, David Demitri and
            Montalan, Jann Railey and
            Gamboa, Lance Calvin and
+           Layacan, Jimson Paulo and
+           Flores, Richell Isaiah and
            Susanto, Yosephine and
            Ngui, Jian Gang}},
   year={{2025}},
