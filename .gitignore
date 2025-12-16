@@ -86,6 +86,10 @@ data/corpora/*.jsonl
 data/memmaps/*
 data/processed/*
 
+# Generated tokenizer files
+data/tokenizer/
+data/tokenizer_expansions/
+
 # Environment variables and secrets
 .env
 *.env
@@ -98,6 +102,11 @@ secrets/
 *.sif
 *.simg
 container_cache/
+
+# Generated container runtime helper scripts (user-specific)
+run_in_docker.sh
+run_in_enroot.sh
+run_in_singularity.sh
 
 # Enroot/Apptainer/Singularity cache
 .enroot/
