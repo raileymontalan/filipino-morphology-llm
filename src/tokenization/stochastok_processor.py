@@ -15,10 +15,12 @@ from .base_processor import TokenizerProcessor
 class StochastokProcessor(TokenizerProcessor):
     """
     A processor that applies stochastok expansion to the tokenized data.
+    Uses the shared expansion building logic from base processor.
     """
     def __init__(self, tokenizer, expand_prop=None):
         super().__init__(tokenizer)
         self.expand_prop = expand_prop
+        # Use inherited set_expansions() from base processor
         self.set_expansions()
 
     def expand(self, token_ids, expand_prop=0.1, max_num_to_expand=None, disable_tqdm=True):
@@ -43,78 +45,7 @@ class StochastokProcessor(TokenizerProcessor):
                 chosen_expansion = random.choice(possible_expansions)
                 token_ids = token_ids[:idx] + list(chosen_expansion) + token_ids[idx+1:]
                 num_expanded += 1
+        # print(f"Attempted to expand {num_to_expand}, expanded {num_expanded}")
+        # print(f"Original length {len(token_ids)-num_expanded}, new length {len(token_ids)}")
+        # print(f"Attempted to expand by {expand_prop*100}%, expanded by {num_expanded/len(token_ids)*100:.2f}%")
         return token_ids
-
-    def set_expansions(self):
-        """
-        Loads expansions dict from file if it exists, otherwise builds and saves it to file.
-        """
-        filename = f"{self.tokenizer_name}_expansions.json"
-        json_file_path = self.get_cache_path("tokenizer_expansions", filename)
-
-        # Check if the file exists
-        if os.path.exists(json_file_path):
-            print(f"Found '{filename}' at: {json_file_path}")
-            with open(json_file_path, 'r', encoding='utf-8') as f:
-                expansions = json.load(f)
-                assert isinstance(expansions, dict), f"{filename} must be a dictionary."
-                print(f"Successfully loaded {filename}.")
-        else:
-            expansions = self.build_expansions()
-            # save the expansions to the file
-            with open(json_file_path, 'w', encoding='utf-8') as f:
-                json.dump(expansions, f)
-            print(f"Successfully saved {filename}.")
-        self.expansions = expansions
-        print(f"Successfully set self.expansions.")
-
-    def build_expansions(self):
-        """
-        1. Builds `merges` (dict):
-            Keys: tuples of token_ids.
-            Values: token_id of the result of merging the two tokens.
-            eg. merges = {(token_id1, token_id2): token_id}
-        2. Builds `expansions` (dict):
-            Keys: token_id.
-            Values: list of tuples of token_ids that the key token_id can be split into.
-            eg. expansions = {token_id: [(token_id1_1, token_id1_2), (token_id2_1, token_id2_2), ...]}
-        """
-        # 1. Build merges dict
-        ttokenizer_byt2int = self.get_mergeable_ranks()  # Mapping of tokenizer's vocab {token_string: token_id} stored as {bytes: int}
-        ttokenizer_tokens_as_tuples = [tuple(token) for token in list(ttokenizer_byt2int.keys())] # Needed to be able to use `in` operator
-        merges = {}
-        for i, (token_as_bytes, token_id) in tqdm(
-            enumerate(ttokenizer_byt2int.items()),
-            total=len(ttokenizer_byt2int),
-            desc="Building tokenizer's merges",
-            ):
-            # Skip tokens that are too short to split (e.g., single bytes in tiktoken)
-            # Note: Gemma tokenizer doesn't have this structure, so we just skip short tokens
-            if len(token_as_bytes) <= 1:
-                continue
-            else:
-                num_merges = 0
-                # Split the token at each possible point and find a split/"merge"
-                # where both parts are already present earlier in the vocab.
-                for j in range(1, len(token_as_bytes)):
-                    first_part = token_as_bytes[:j]
-                    second_part = token_as_bytes[j:]
-                    if tuple(first_part) in ttokenizer_tokens_as_tuples and tuple(second_part) in ttokenizer_tokens_as_tuples:
-                        first_part_id = ttokenizer_byt2int[first_part]
-                        second_part_id = ttokenizer_byt2int[second_part]
-                        merges[(first_part_id, second_part_id)] = token_id
-                        num_merges += 1
-                        # print(f"{first_part}: {first_part_id} + {second_part}: {second_part_id} -> {token_as_bytes}: {token_id}")
-                # Note: Some tokenizers (like Gemma with byte-fallback) may have tokens that can't be split
-                # This is okay - we just skip them for stochastok expansion
-                if num_merges == 0:
-                    continue
-        
-        # 2. Build expansions dict
-        expansions = {}
-        for k, v in merges.items():
-            if v in expansions:
-                expansions[v].append(k)
-            else:
-                expansions[v] = [k]
-        return expansions

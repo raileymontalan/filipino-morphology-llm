@@ -14,8 +14,10 @@ import json
 from tqdm import tqdm
 from typing import List, Tuple, Optional
 
+from .base_processor import TokenizerProcessor
 
-class MorphologyAwarePatokProcessor:
+
+class MorphologyAwarePatokProcessor(TokenizerProcessor):
     """
     Patok processor with morphological awareness for Filipino.
 
@@ -36,8 +38,6 @@ class MorphologyAwarePatokProcessor:
         contract_prob: List[float] = [0.35, 0.35, 0.3],
         affix_awareness: float = 0.95,
         affix_awareness_if_overlap: float = 0.75,
-        save_expansions_to: Optional[str] = None,
-        expansions_file: Optional[str] = None,
         expand_prop: float = 0.1,
         contract_prop: float = 0.9,
     ):
@@ -46,7 +46,6 @@ class MorphologyAwarePatokProcessor:
 
         Args:
             tokenizer: Tokenizer with encode/decode methods
-            affixes: List of Filipino affixes. If None, loads from default file
             prefix_file: path to file containing one prefix per line
             infix_file: path to file containing one infix per line
             suffix_file: path to file containing one suffix per line
@@ -54,12 +53,13 @@ class MorphologyAwarePatokProcessor:
             contract_prob (list of float, sum = 1): probability weights of choosing number of tokens in num_toks_to_cont
             affix_awareness: Probability of skipping contraction if token is affix
             affix_awareness_if_overlap: Affix awareness if multiple affixes at same position
-            save_expansions_to: json file to which expansions will be saved
-            expansions_file: path to json file containing expansions
             expand_prop: Default proportion of tokens to expand
             contract_prop: Default proportion of tokens to contract
         """
-        self.tokenizer = tokenizer
+        # Initialize base class (handles tokenizer, tokenizer_name, expansions)
+        super().__init__(tokenizer)
+        
+        # Patok-specific parameters
         self.prefix_file = prefix_file
         self.infix_file = infix_file
         self.suffix_file = suffix_file
@@ -69,8 +69,6 @@ class MorphologyAwarePatokProcessor:
         self.affix_awareness_if_overlap = affix_awareness_if_overlap
         self.expand_prop = expand_prop
         self.contract_prop = contract_prop
-        self.save_expansions_to = save_expansions_to
-        self.expansions_file = expansions_file
 
         # Load affixes and build automaton
         self.affixes = self._build_affix_list()
@@ -79,8 +77,8 @@ class MorphologyAwarePatokProcessor:
         # Get affix token IDs
         self.affix_ids = self._generate_affix_ids(self.affixes)
 
-        # Build expansion dictionary
-        self.expansions = self._build_expansions()
+        # Use base class method to set expansions (with caching)
+        self.set_expansions()
 
         print(f"Initialized MorphologyAwarePatokProcessor:")
         print(f"  - {len(self.affixes)} affix versions loaded")
@@ -109,6 +107,8 @@ class MorphologyAwarePatokProcessor:
             Returns:
                 list: list of affixes from file
             """
+            if path is None:
+                return []
             with open(path, "r", encoding="utf-8") as f:
                 return [line.strip() for line in f if line.strip()]
 
@@ -153,7 +153,7 @@ class MorphologyAwarePatokProcessor:
 
         return all_affix_versions
 
-    def _build_affix_finder(self, affixes: List[str]) -> ahocorasick.Automaton:
+    def _build_affix_finder(self, affixes: List[str]) -> Optional[ahocorasick.Automaton]:
         """
         Build Aho-Corasick automaton for efficient affix detection.
 
@@ -161,8 +161,11 @@ class MorphologyAwarePatokProcessor:
             affixes: List of affix strings
 
         Returns:
-            Aho-Corasick automaton
+            Aho-Corasick automaton, or None if no affixes
         """
+        if not affixes:
+            return None
+            
         affix_finder = ahocorasick.Automaton()
 
         for affix in affixes:
@@ -171,27 +174,28 @@ class MorphologyAwarePatokProcessor:
         affix_finder.make_automaton()
         return affix_finder
 
-    def _generate_affix_ids(self, affixes:List[str]) -> List[int]:
+    def _generate_affix_ids(self, affixes: List[str]) -> List[int]:
         """
-        Get token id's of affixes that are in the tokenizer's vocabulary.
+        Get token IDs of affixes that are in the tokenizer's vocabulary.
+        
         Args:
-            affixes (list): list of affixes
-            tokenizer
+            affixes: List of affix strings
+            
         Returns:
-            list: list of token_ids corresponding to affixes that are in vocabulary
+            List of token IDs corresponding to affixes in vocabulary
         """
-
-        # get tiktoken affix_ids by checking if affix is in _mergeable_ranks
-        if hasattr(self.tokenizer, "_mergeable_ranks"):
-            affix_ids = [self.tokenizer._mergeable_ranks.get(aff.encode('utf-8')) for aff in affixes
-                         if aff.encode('utf-8') in self.tokenizer._mergeable_ranks]
-
-        # get HF Autotokenizer affix_ids by checking if encoding the affix results in only
-        # one token_id; if it does not, then affix is not in vocabulary
-        else:
-            affix_ids = [self.tokenizer.encode(aff,add_special_tokens=False)[0] for aff in affixes
-                         if len(self.tokenizer.encode(aff,add_special_tokens=False))==1]
-
+        mergeable_ranks = self.get_mergeable_ranks()
+        affix_ids = []
+        
+        for aff in affixes:
+            try:
+                aff_bytes = aff.encode('utf-8')
+                if aff_bytes in mergeable_ranks:
+                    affix_ids.append(mergeable_ranks[aff_bytes])
+            except (UnicodeEncodeError, AttributeError):
+                # Skip affixes that can't be encoded
+                continue
+        
         return affix_ids
 
     def find_affixes(self, s: str) -> List[Tuple[int, str]]:
@@ -204,84 +208,14 @@ class MorphologyAwarePatokProcessor:
         Returns:
             List of (start_index, affix) tuples
         """
+        if self.affix_finder is None:
+            return []
+            
         matches = []
         for end_index, aff in self.affix_finder.iter(s):
             start_index = end_index - len(aff) + 1
             matches.append((start_index, aff))
         return matches
-
-    def _build_expansions(self) -> dict:
-        """
-        0. Inputs
-            tokenizer whose vocab will be crawled to build expansions
-            save_expansions_to (str): saves expansions into given json file name
-            expansions_file (string): path to json file containing expansions
-        1. Builds `merges` (dict):
-            Keys: tuples of token_ids.
-            Values: token_id of the result of merging the two tokens.
-            eg. merges = {(token_id1, token_id2): token_id}
-        2. Builds `expansions` (dict):
-            Keys: token_id.
-            Values: list of tuples of token_ids that the key token_id can be split into.
-            eg. expansions = {token_id: [(token_id1_1, token_id1_2), (token_id2_1, token_id2_2), ...]}
-        """
-
-        #0. Check if user provides expansions_file, then load
-        if isinstance(self.expansions_file, str):
-            with open(self.expansions_file , "r") as f:
-                loaded_expansions = json.load(f)
-
-            # convert keys to integers
-            loaded_expansions = {int(k): v for k, v in loaded_expansions.items()}
-
-            return loaded_expansions
-
-
-        # 1. Build merges dict
-        # get tiktoken vocab
-        if hasattr(self.tokenizer, "_mergeable_ranks"):
-            ttokenizer_byt2int = self.tokenizer._mergeable_ranks
-        # get HF Autotokenizer vocab
-        else:
-            ttokenizer_byt2int = self.tokenizer.get_vocab()
-
-        ttokenizer_tokens_as_tuples = [tuple(token) for token in list(ttokenizer_byt2int.keys())] # Needed to be able to use `in` operator
-        merges = {}
-        for i, (token_as_bytes, token_id) in tqdm(
-            enumerate(ttokenizer_byt2int.items()),
-            total=len(ttokenizer_byt2int),
-            desc="Building tokenizer's merges",
-            ):
-            # print(f"{i=}: {token_as_bytes.decode('utf-8')}")
-            num_merges = 0
-            ## split the token at each possible point and find a split/"merge" where both parts are already present earlier in the vocab.
-            for j in range(1, len(token_as_bytes)):
-                first_part = token_as_bytes[:j]
-                second_part = token_as_bytes[j:]
-                # print(f"{j=}: {first_part.decode('utf-8')} + {second_part.decode('utf-8')}")
-                if tuple(first_part) in ttokenizer_tokens_as_tuples and tuple(second_part) in ttokenizer_tokens_as_tuples:
-                    first_part_id = ttokenizer_byt2int[first_part]
-                    second_part_id = ttokenizer_byt2int[second_part]
-                    merges[(first_part_id, second_part_id)] = token_id
-                    num_merges += 1
-                    # print(f"{first_part}: {first_part_id} + {second_part}: {second_part_id} -> {token_as_bytes}: {token_id}")
-            #assert num_merges >= 1, f"No merge found for {token_as_bytes=}: {list(token_as_bytes)=}"
-
-        # 2. Build expansions dict
-        expansions = {}
-        for k, v in merges.items():
-            if v in expansions:
-                expansions[v].append(k)
-            else:
-                expansions[v] = [k]
-
-
-        # 3. Save expansions if file name by user
-        if isinstance(self.save_expansions_to, str):
-            with open(self.save_expansions_to, "w") as f:
-                json.dump(expansions, f, indent=2)
-
-        return expansions
 
     def contract_randomly(
         self,
