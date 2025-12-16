@@ -127,7 +127,7 @@ def parse_args():
     parser.add_argument(
         "--checkpoint-interval",
         type=int,
-        default=50,
+        default=1000,
         help="Save checkpoint every N steps",
     )
     parser.add_argument(
