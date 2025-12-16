@@ -1,0 +1,261 @@
+# Model configurations for evaluation
+# Format: model_name -> (huggingface_path, type, tokenizer)
+# type: "pt" (pretrained) or "it" (instruction-tuned)
+# tokenizer: identifier for shared tokenizers (models with same tokenizer share expansions)
+
+models:
+  # ============================================================================
+  # GPT-2 Family (all share same tokenizer)
+  # ============================================================================
+  gpt2:
+    path: gpt2
+    type: pt
+    tokenizer: gpt2
+  
+  gpt2-medium:
+    path: gpt2-medium
+    type: pt
+    tokenizer: gpt2
+  
+  gpt2-large:
+    path: gpt2-large
+    type: pt
+    tokenizer: gpt2
+  
+  gpt2-xl:
+    path: gpt2-xl
+    type: pt
+    tokenizer: gpt2
+
+  # ============================================================================
+  # Gemma 1 Family (original, share tokenizer within size)
+  # ============================================================================
+  gemma-2b:
+    path: google/gemma-2b
+    type: pt
+    tokenizer: google/gemma-2b
+  
+  gemma-2b-it:
+    path: google/gemma-2b-it
+    type: it
+    tokenizer: google/gemma-2b
+  
+  gemma-7b:
+    path: google/gemma-7b
+    type: pt
+    tokenizer: google/gemma-7b
+  
+  gemma-7b-it:
+    path: google/gemma-7b-it
+    type: it
+    tokenizer: google/gemma-7b
+
+  # ============================================================================
+  # Gemma 2 Family (newer generation, share tokenizer within size)
+  # ============================================================================
+  gemma-2-2b:
+    path: google/gemma-2-2b
+    type: pt
+    tokenizer: google/gemma-2-2b
+  
+  gemma-2-2b-it:
+    path: google/gemma-2-2b-it
+    type: it
+    tokenizer: google/gemma-2-2b
+  
+  gemma-2-9b:
+    path: google/gemma-2-9b
+    type: pt
+    tokenizer: google/gemma-2-9b
+  
+  gemma-2-9b-it:
+    path: google/gemma-2-9b-it
+    type: it
+    tokenizer: google/gemma-2-9b
+
+  # ============================================================================
+  # Gemma 3 Family (latest generation, share tokenizer within size)
+  # ============================================================================
+  gemma-3-270m:
+    path: google/gemma-3-270m
+    type: pt
+    tokenizer: google/gemma-3-270m
+  
+  gemma-3-270m-it:
+    path: google/gemma-3-270m-it
+    type: it
+    tokenizer: google/gemma-3-270m
+
+  gemma-3-1b-pt:
+    path: google/gemma-3-1b-pt
+    type: pt
+    tokenizer: google/gemma-3-1b-pt
+
+  gemma-3-1b-it:
+    path: google/gemma-3-1b-it
+    type: it
+    tokenizer: google/gemma-3-1b-pt
+
+  # ============================================================================
+  # Llama 3.1 Family (share same tokenizer within version)
+  # ============================================================================
+  llama-3.1-8b:
+    path: meta-llama/Llama-3.1-8B
+    type: pt
+    tokenizer: meta-llama/Llama-3.1-8B
+  
+  llama-3.1-8b-it:
+    path: meta-llama/Llama-3.1-8B-Instruct
+    type: it
+    tokenizer: meta-llama/Llama-3.1-8B
+
+  # ============================================================================
+  # Llama 3.2 Family (share same tokenizer within version)
+  # ============================================================================
+  llama-3.2-1b:
+    path: meta-llama/Llama-3.2-1B
+    type: pt
+    tokenizer: meta-llama/Llama-3.2-1B
+  
+  llama-3.2-1b-it:
+    path: meta-llama/Llama-3.2-1B-Instruct
+    type: it
+    tokenizer: meta-llama/Llama-3.2-1B
+  
+  llama-3.2-3b:
+    path: meta-llama/Llama-3.2-3B
+    type: pt
+    tokenizer: meta-llama/Llama-3.2-3B
+  
+  llama-3.2-3b-it:
+    path: meta-llama/Llama-3.2-3B-Instruct
+    type: it
+    tokenizer: meta-llama/Llama-3.2-3B
+
+  # ============================================================================
+  # SEA-LION v3 Family (Southeast Asian language models)
+  # Llama-based models share Llama tokenizer, Gemma-based share Gemma tokenizer
+  # ============================================================================
+  sea-lion-v3-8b:
+    path: aisingapore/Llama-SEA-LION-v3-8B
+    type: pt
+    tokenizer: meta-llama/Llama-3.1-8B
+  
+  sea-lion-v3-8b-it:
+    path: aisingapore/Llama-SEA-LION-v3-8B-IT
+    type: it
+    tokenizer: meta-llama/Llama-3.1-8B
+  
+  sea-lion-gemma-v3-9b:
+    path: aisingapore/Gemma-SEA-LION-v3-9B
+    type: pt
+    tokenizer: google/gemma-2-9b
+  
+  sea-lion-gemma-v3-9b-it:
+    path: aisingapore/Gemma-SEA-LION-v3-9B-IT
+    type: it
+    tokenizer: google/gemma-2-9b
+
+  # ============================================================================
+  # Qwen 2.5 Family (share same tokenizer within size group)
+  # ============================================================================
+  qwen-2.5-0.5b:
+    path: Qwen/Qwen2.5-0.5B
+    type: pt
+    tokenizer: Qwen/Qwen2.5-0.5B
+  
+  qwen-2.5-0.5b-it:
+    path: Qwen/Qwen2.5-0.5B-Instruct
+    type: it
+    tokenizer: Qwen/Qwen2.5-0.5B
+  
+  qwen-2.5-1.5b:
+    path: Qwen/Qwen2.5-1.5B
+    type: pt
+    tokenizer: Qwen/Qwen2.5-1.5B
+  
+  qwen-2.5-1.5b-it:
+    path: Qwen/Qwen2.5-1.5B-Instruct
+    type: it
+    tokenizer: Qwen/Qwen2.5-1.5B
+  
+  qwen-2.5-3b:
+    path: Qwen/Qwen2.5-3B
+    type: pt
+    tokenizer: Qwen/Qwen2.5-3B
+  
+  qwen-2.5-3b-it:
+    path: Qwen/Qwen2.5-3B-Instruct
+    type: it
+    tokenizer: Qwen/Qwen2.5-3B
+  
+  qwen-2.5-7b:
+    path: Qwen/Qwen2.5-7B
+    type: pt
+    tokenizer: Qwen/Qwen2.5-7B
+  
+  qwen-2.5-7b-it:
+    path: Qwen/Qwen2.5-7B-Instruct
+    type: it
+    tokenizer: Qwen/Qwen2.5-7B
+  
+  qwen-2.5-14b:
+    path: Qwen/Qwen2.5-14B
+    type: pt
+    tokenizer: Qwen/Qwen2.5-14B
+  
+  qwen-2.5-14b-it:
+    path: Qwen/Qwen2.5-14B-Instruct
+    type: it
+    tokenizer: Qwen/Qwen2.5-14B
+
+  # ============================================================================
+  # Qwen 3 Family (share same tokenizer within model)
+  # ============================================================================
+  qwen-3-0.6b:
+    path: Qwen/Qwen3-0.6B
+    type: it
+    tokenizer: Qwen/Qwen3-0.6B
+
+  qwen-3-1.7b:
+    path: Qwen/Qwen3-1.7B
+    type: it
+    tokenizer: Qwen/Qwen3-1.7B
+  
+  qwen3-4b-it:
+    path: Qwen/Qwen3-4B-Instruct-2507
+    type: it
+    tokenizer: Qwen/Qwen3-4B-Instruct-2507
+  
+  qwen3-4b-thinking:
+    path: Qwen/Qwen3-4B-Thinking-2507
+    type: it
+    tokenizer: Qwen/Qwen3-4B-Instruct-2507
+
+  # ============================================================================
+  # Cerebras GPT Family (all use GPT-2 tokenizer)
+  # ============================================================================
+  cerebras-gpt-111m:
+    path: cerebras/Cerebras-GPT-111M
+    type: pt
+    tokenizer: gpt2
+  
+  cerebras-gpt-256m:
+    path: cerebras/Cerebras-GPT-256M
+    type: pt
+    tokenizer: gpt2
+  
+  cerebras-gpt-590m:
+    path: cerebras/Cerebras-GPT-590M
+    type: pt
+    tokenizer: gpt2
+  
+  cerebras-gpt-1.3b:
+    path: cerebras/Cerebras-GPT-1.3B
+    type: pt
+    tokenizer: gpt2
+  
+  cerebras-gpt-2.7b:
+    path: cerebras/Cerebras-GPT-2.7B
+    type: pt
+    tokenizer: gpt2
