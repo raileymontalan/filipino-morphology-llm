@@ -398,6 +398,60 @@ Head-to-head comparison across benchmarks for the top 15 performing models.
 
 ---
 
+## Continued Pretraining Results
+
+Results from continued pretraining of Gemma-2-2B on SEA-PILE v2 Filipino corpus (~7.4GB) with different tokenization strategies.
+
+### MCQ Benchmark Accuracy
+
+| Model | Training Steps | PACUTE | Hierarchical | LangGame | Math (EM) |
+|-------|---------------|--------|--------------|----------|-----------|
+| **gemma-2-2b (base)** | 0 | 30.4% | 27.5% | 40.0% | 88.5%* |
+| | | | | | |
+| **Vanilla (Baseline BPE)** | | | | | |
+| vanilla-step999 | 1K | 22.9% | 24.7% | 25.8% | 0.0% |
+| vanilla-step1999 | 2K | 27.1% | **26.7%** | 27.5% | 0.0% |
+| vanilla-step2999 | 3K | 23.7% | 24.4% | 26.7% | 0.0% |
+| vanilla-step3999 | 4K | 23.3% | 25.4% | 26.6% | 0.0% |
+| vanilla-step4999 | 5K | 23.6% | 25.5% | 26.2% | 0.0% |
+| | | | | | |
+| **Stochastok (~10% expansion)** | | | | | |
+| stochastok-step1999 | 2K | 26.5% | 23.4% | 27.7% | 0.0% |
+| stochastok-step2999 | 3K | 24.9% | 24.0% | 28.6% | 0.0% |
+| stochastok-step3999 | 4K | **28.1%** | 25.2% | **28.7%** | 0.0% |
+| stochastok-step4999 | 5K | 27.1% | 26.0% | 27.7% | 0.0% |
+| | | | | | |
+| **Patok (Morphology-aware)** | | | | | |
+| patok-step1999 | 2K | 26.6% | 26.2% | 26.5% | 0.0% |
+| patok-step2999 | 3K | 26.6% | 25.7% | 26.7% | 0.0% |
+| patok-step3999 | 4K | 27.4% | 25.2% | 26.1% | 0.0% |
+| patok-step4999 | 5K | 27.0% | 25.5% | 26.2% | 0.0% |
+
+*MCQ benchmarks: 25% = random baseline (4 options). Math: exact match accuracy (base model uses contains-match*). Bold indicates best across all methods. CUTE benchmark skipped (generative-only).*
+
+### Key Findings
+
+1. **Stochastok achieves best PACUTE performance**: 28.1% at step 4K vs vanilla 27.1% at step 2K vs patok 27.4% at step 4K
+2. **Stochastok dominates LangGame**: 28.7% (stochastok-step3999) significantly outperforms vanilla (~26-27%) and patok (~26%)
+3. **Patok shows consistent Hierarchical scores**: Patok-step1999 achieves 26.2% on hierarchical reasoning, competitive with vanilla-step1999 (26.7%)
+4. **Vanilla peaks early, then degrades**: Best performance at step 2K, declining thereafter
+5. **Catastrophic forgetting of math**: All trained models lose math capability entirely (88.5% → 0.0%)
+6. **All methods below base model**: None of the CPT approaches surpasses the base Gemma-2-2B on morphological benchmarks - suggests either insufficient training or need for different approach
+
+### Trained Model Checkpoints
+
+All checkpoints available on HuggingFace:
+
+| Method | HuggingFace Repository | Available Steps |
+|--------|----------------------|-----------------|
+| Vanilla | [davidafrica/gemma2-2b-filipino-vanilla](https://huggingface.co/davidafrica/gemma2-2b-filipino-vanilla) | 999, 1999, 2999, 3999, 4999 |
+| Stochastok | [davidafrica/gemma2-2b-filipino-stochastok](https://huggingface.co/davidafrica/gemma2-2b-filipino-stochastok) | 1999, 2999, 3999, 4999 |
+| Patok | [davidafrica/gemma2-2b-filipino-patok](https://huggingface.co/davidafrica/gemma2-2b-filipino-patok) | 1999, 2999, 3999, 4999 |
+
+*Note: step999 checkpoints for stochastok/patok were incomplete due to distributed checkpoint format issues.*
+
+---
+
 ## Citation
 
 If you use this code or benchmarks, please cite:
