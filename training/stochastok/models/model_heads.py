@@ -3,7 +3,6 @@ A collection of different model heads.
 """
 
 import torch
-
 from models.components.layers.normalization import build_normalization
 
 
@@ -41,4 +40,3 @@ class AutoregressiveLMHead(torch.nn.Module):
         x = self.linear(x)
 
         return x, None
-

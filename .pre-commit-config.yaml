@@ -2,6 +2,7 @@
 # Install: pip install pre-commit && pre-commit install
 # Run manually: pre-commit run --all-files
 
+
 repos:
   # Code formatting
   - repo: https://github.com/psf/black
@@ -10,69 +11,60 @@ repos:
       - id: black
         name: Format Python code with Black
         language_version: python3.11
-        args: ['--line-length=100']
-        exclude: ^(env/|cache/|container_cache/|nemo_experiments/|\.vscode/)
+        args: ['--line-length=120']
+        exclude: ^(env/|cache/|container_cache/|nemo_experiments/|\.vscode/|training/stochastok/)
 
-  # Import sorting
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: Sort imports with isort
-        args: ['--profile', 'black', '--line-length=100']
-        exclude: ^(env/|cache/|container_cache/|nemo_experiments/|\.vscode/)
+  # Python linting and import sorting with Ruff
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.4.4
+  #   hooks:
+  #     - id: ruff
+  #       name: Lint Python with Ruff
+  #       args: [
+  #         '--line-length=120',
+  #         '--extend-exclude=env,cache,container_cache,nemo_experiments,.vscode,training/stochastok/',
+  #         '--select=ALL',
+  #         '--ignore=E203',
+  #       ]
 
-  # Remove trailing whitespace
+  # Essential pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
         name: Trim trailing whitespace
-        exclude: ^(\.gitignore|.*\.md|env/|cache/)
-        
+        exclude: ^(\.gitignore|.*\.md|env/|cache/|training/stochastok/)
+
       - id: end-of-file-fixer
         name: Fix end of files
-        exclude: ^(env/|cache/|container_cache/|\.vscode/)
-        
+        exclude: ^(env/|cache/|container_cache/|\.vscode/|training/stochastok/)
+
       - id: check-yaml
         name: Check YAML syntax
-        exclude: ^(env/|cache/|container_cache/)
-        
+        exclude: ^(env/|cache/|container_cache/|training/stochastok/)
+
       - id: check-json
         name: Check JSON syntax
-        exclude: ^(data/|env/|cache/|container_cache/|src/tokenization/expansions/)
-        
+        exclude: ^(data/|env/|cache/|container_cache/|src/tokenization/expansions/|training/stochastok/)
+
       - id: check-added-large-files
         name: Check for large files (>5MB)
         args: ['--maxkb=5120']
-        exclude: ^(data/|cache/|container_cache/|results/|logs/)
-        
+        exclude: ^(data/|cache/|container_cache/|results/|logs/|training/stochastok/)
+
       - id: check-case-conflict
         name: Check for case conflicts
-        
+
       - id: check-merge-conflict
         name: Check for merge conflicts
-        
+
       - id: detect-private-key
         name: Detect private keys
-        
+
       - id: mixed-line-ending
         name: Check mixed line endings
         args: ['--fix=lf']
-        exclude: ^(env/|cache/|container_cache/)
-
-  # Python linting
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        name: Lint Python with Flake8
-        args: [
-          '--max-line-length=100',
-          '--extend-ignore=E203,W503',  # Black-compatible
-          '--exclude=env,cache,container_cache,nemo_experiments,.vscode'
-        ]
-        additional_dependencies: [flake8-docstrings]
+        exclude: ^(env/|cache/|container_cache/|training/stochastok/)
 
   # Prevent committing to main
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -81,26 +73,11 @@ repos:
       - id: no-commit-to-branch
         name: Prevent direct commits to main
         args: ['--branch', 'main', '--branch', 'master']
-        stages: [commit]
+        stages: [pre-commit]
 
   # Custom hooks for this project
   - repo: local
     hooks:
-      - id: check-large-json-expansions
-        name: Check for large expansion JSONs in src/
-        entry: bash
-        args:
-          - -c
-          - >
-            if find src/tokenization/expansions -name "*.json" -size +1M 2>/dev/null | grep -q .;
-            then
-              echo "ERROR: Large expansion JSON files found in src/tokenization/expansions/.";
-              echo "These should be in data/expansions/ or gitignored.";
-              exit 1;
-            fi
-        language: system
-        pass_filenames: false
-        
       - id: check-sys-path-pattern
         name: Check for inconsistent sys.path patterns
         entry: bash
@@ -117,7 +94,7 @@ repos:
         pass_filenames: false
 
       - id: check-test-naming
-        name: Check test file naming convention  
+        name: Check test file naming convention
         entry: bash
         args:
           - -c
@@ -140,5 +117,6 @@ exclude: |
     nemo_experiments/.*|
     \.vscode/.*|
     data/expansions/.*\.json|
-    src/tokenization/expansions/.*\.json
+    src/tokenization/expansions/.*\.json|
+    training/stochastok/.*
   )$

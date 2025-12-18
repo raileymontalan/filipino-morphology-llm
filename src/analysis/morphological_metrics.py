@@ -14,16 +14,18 @@ References:
 - "Rethinking Tokenization for Rich Morphology" (MorphScore definition)
 """
 
-import numpy as np
-from typing import List, Dict, Tuple, Set, Optional
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Set, Tuple
+
+import numpy as np
 import pandas as pd
 
 
 @dataclass
 class MorphologicalAnnotation:
     """Morphological annotation for a word."""
+
     word: str
     morphemes: List[str]  # e.g., ["nag", "luto"] for "nagluto"
     morpheme_boundaries: List[int]  # Character positions of boundaries
@@ -42,15 +44,11 @@ class MorphologicalMetrics:
         """
         self.tokenizer = tokenizer
 
-    def compute_morph_score(
-        self,
-        annotations: List[MorphologicalAnnotation],
-        normalize: bool = True
-    ) -> float:
+    def compute_morph_score(self, annotations: List[MorphologicalAnnotation], normalize: bool = True) -> float:
         """
         Compute MorphScore: alignment between token and morpheme boundaries.
 
-        MorphScore = (# token boundaries that align with morpheme boundaries) / (# total morpheme boundaries)
+        MorphScore = (# token boundaries that align with morpheme boundaries) / (# total morpheme boundaries)  # noqa: E501
 
         Higher score = better alignment
 
@@ -85,7 +83,7 @@ class MorphologicalMetrics:
     def compute_affix_preservation_score(
         self,
         annotations: List[MorphologicalAnnotation],
-        affix_types: Optional[Set[str]] = None
+        affix_types: Optional[Set[str]] = None,
     ) -> Dict[str, float]:
         """
         Compute how often affixes appear as complete tokens.
@@ -132,17 +130,17 @@ class MorphologicalMetrics:
         results = {
             "overall": total_preserved / total_affixes if total_affixes > 0 else 0.0,
             "by_type": {
-                mtype: type_preserved[mtype] / type_counts[mtype] if type_counts[mtype] > 0 else 0.0
+                mtype: (type_preserved[mtype] / type_counts[mtype] if type_counts[mtype] > 0 else 0.0)
                 for mtype in affix_types
             },
             "by_affix": {
-                affix: affix_preserved[affix] / affix_counts[affix] if affix_counts[affix] > 0 else 0.0
+                affix: (affix_preserved[affix] / affix_counts[affix] if affix_counts[affix] > 0 else 0.0)
                 for affix in affix_counts.keys()
             },
             "counts": {
                 "total_affixes": total_affixes,
                 "total_preserved": total_preserved,
-            }
+            },
         }
 
         return results
@@ -194,10 +192,7 @@ class MorphologicalMetrics:
 
         return entropies
 
-    def compute_boundary_alignment_f1(
-        self,
-        annotations: List[MorphologicalAnnotation]
-    ) -> Dict[str, float]:
+    def compute_boundary_alignment_f1(self, annotations: List[MorphologicalAnnotation]) -> Dict[str, float]:
         """
         Compute precision, recall, and F1 for morpheme boundary detection.
 
@@ -243,10 +238,7 @@ class MorphologicalMetrics:
             "fn": total_fn,
         }
 
-    def compute_morpheme_fragmentation(
-        self,
-        annotations: List[MorphologicalAnnotation]
-    ) -> Dict[str, float]:
+    def compute_morpheme_fragmentation(self, annotations: List[MorphologicalAnnotation]) -> Dict[str, float]:
         """
         Measure how fragmented morphemes are in tokenization.
 
@@ -272,10 +264,7 @@ class MorphologicalMetrics:
         results = {
             "overall": np.mean(fragmentations) if fragmentations else 0.0,
             "std": np.std(fragmentations) if fragmentations else 0.0,
-            "by_type": {
-                mtype: np.mean(frags) if frags else 0.0
-                for mtype, frags in type_fragmentations.items()
-            }
+            "by_type": {mtype: np.mean(frags) if frags else 0.0 for mtype, frags in type_fragmentations.items()},
         }
 
         return results
@@ -294,10 +283,10 @@ class MorphologicalMetrics:
         for token_id in token_ids:
             token_bytes = self.tokenizer.decode_single_token_bytes(token_id)
             try:
-                token_str = token_bytes.decode('utf-8')
+                token_str = token_bytes.decode("utf-8")
                 tokens.append(token_str)
-            except:
-                tokens.append(token_bytes.decode('utf-8', errors='replace'))
+            except Exception:
+                tokens.append(token_bytes.decode("utf-8", errors="replace"))
 
         return tokens
 
@@ -382,8 +371,7 @@ class MorphologicalMetrics:
 
 
 def compare_tokenizers_morphologically(
-    tokenizer_dict: Dict[str, any],
-    annotations: List[MorphologicalAnnotation]
+    tokenizer_dict: Dict[str, any], annotations: List[MorphologicalAnnotation]
 ) -> pd.DataFrame:
     """
     Compare multiple tokenizers on morphological metrics.
@@ -405,15 +393,17 @@ def compare_tokenizers_morphologically(
         boundary_f1 = metrics.compute_boundary_alignment_f1(annotations)
         fragmentation = metrics.compute_morpheme_fragmentation(annotations)
 
-        results.append({
-            "tokenizer": name,
-            "morph_score": morph_score,
-            "affix_preservation": affix_preservation["overall"],
-            "boundary_f1": boundary_f1["f1"],
-            "boundary_precision": boundary_f1["precision"],
-            "boundary_recall": boundary_f1["recall"],
-            "fragmentation": fragmentation["overall"],
-        })
+        results.append(
+            {
+                "tokenizer": name,
+                "morph_score": morph_score,
+                "affix_preservation": affix_preservation["overall"],
+                "boundary_f1": boundary_f1["f1"],
+                "boundary_precision": boundary_f1["precision"],
+                "boundary_recall": boundary_f1["recall"],
+                "fragmentation": fragmentation["overall"],
+            }
+        )
 
     return pd.DataFrame(results).sort_values("morph_score", ascending=False)
 
@@ -421,7 +411,7 @@ def compare_tokenizers_morphologically(
 def generate_morphological_report(
     tokenizer,
     annotations: List[MorphologicalAnnotation],
-    tokenizer_name: str = "Unknown"
+    tokenizer_name: str = "Unknown",
 ) -> str:
     """Generate a human-readable report on morphological alignment."""
     metrics = MorphologicalMetrics(tokenizer)

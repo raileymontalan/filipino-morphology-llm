@@ -9,8 +9,9 @@ Provides methods to:
 """
 
 import json
-from typing import Dict, List, Tuple
 from collections import defaultdict
+from typing import Dict, List, Tuple
+
 import pandas as pd
 
 
@@ -52,12 +53,14 @@ class HierarchicalAnalyzer:
         for level in sorted(level_stats.keys()):
             stats = level_stats[level]
             accuracy = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
-            profile.append({
-                "level": level,
-                "accuracy": accuracy,
-                "n_correct": stats["correct"],
-                "n_total": stats["total"]
-            })
+            profile.append(
+                {
+                    "level": level,
+                    "accuracy": accuracy,
+                    "n_correct": stats["correct"],
+                    "n_total": stats["total"],
+                }
+            )
 
         return pd.DataFrame(profile)
 
@@ -82,13 +85,15 @@ class HierarchicalAnalyzer:
         profile = []
         for (level, subcategory), stats in subcat_stats.items():
             accuracy = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
-            profile.append({
-                "level": level,
-                "subcategory": subcategory,
-                "accuracy": accuracy,
-                "n_correct": stats["correct"],
-                "n_total": stats["total"]
-            })
+            profile.append(
+                {
+                    "level": level,
+                    "subcategory": subcategory,
+                    "accuracy": accuracy,
+                    "n_correct": stats["correct"],
+                    "n_total": stats["total"],
+                }
+            )
 
         return pd.DataFrame(profile).sort_values(["level", "subcategory"])
 
@@ -114,12 +119,14 @@ class HierarchicalAnalyzer:
             level_n_plus_1 = profile.iloc[i + 1]
 
             if level_n["accuracy"] < threshold and level_n_plus_1["accuracy"] <= level_n["accuracy"]:
-                cascades.append((
-                    int(level_n["level"]),
-                    int(level_n_plus_1["level"]),
-                    level_n["accuracy"],
-                    level_n_plus_1["accuracy"]
-                ))
+                cascades.append(
+                    (
+                        int(level_n["level"]),
+                        int(level_n_plus_1["level"]),
+                        level_n["accuracy"],
+                        level_n_plus_1["accuracy"],
+                    )
+                )
 
         return cascades
 
@@ -172,7 +179,7 @@ class HierarchicalAnalyzer:
 
         return dependencies
 
-    def compare_models(self, other_analyzer: 'HierarchicalAnalyzer') -> pd.DataFrame:
+    def compare_models(self, other_analyzer: "HierarchicalAnalyzer") -> pd.DataFrame:
         """
         Compare this model's performance with another model.
 
@@ -200,15 +207,17 @@ class HierarchicalAnalyzer:
             # Simple significance test: difference > 5% and enough samples
             significant = abs(diff) > 0.05 and min(row1["n_total"], row2["n_total"]) > 20
 
-            comparison.append({
-                "level": level,
-                "model1_accuracy": row1["accuracy"],
-                "model2_accuracy": row2["accuracy"],
-                "difference": diff,
-                "significant": significant,
-                "model1_n": row1["n_total"],
-                "model2_n": row2["n_total"]
-            })
+            comparison.append(
+                {
+                    "level": level,
+                    "model1_acc": row1["accuracy"],
+                    "model2_acc": row2["accuracy"],
+                    "difference": diff,
+                    "significant": significant,
+                    "model1_n": row1["n_total"],
+                    "model2_n": row2["n_total"],
+                }
+            )
 
         return pd.DataFrame(comparison)
 
@@ -234,7 +243,9 @@ class HierarchicalAnalyzer:
         report.append("-" * 60)
         for _, row in profile.iterrows():
             bar = "█" * int(row["accuracy"] * 20)
-            report.append(f"Level {int(row['level'])}: {row['accuracy']:.1%} {bar} ({row['n_correct']}/{row['n_total']})")
+            report.append(
+                f"Level {int(row['level'])}: {row['accuracy']:.1%} {bar} ({row['n_correct']}/{row['n_total']})"
+            )
         report.append("")
 
         # Identify strongest and weakest levels
@@ -301,7 +312,7 @@ class HierarchicalAnalyzer:
         export_data = {
             "overall_profile": profile.to_dict(orient="records"),
             "subcategory_profile": subcat_profile.to_dict(orient="records"),
-            "failure_examples": {}
+            "failure_examples": {},
         }
 
         # Add failure examples for each level

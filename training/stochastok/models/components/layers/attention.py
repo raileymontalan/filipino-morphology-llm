@@ -24,9 +24,7 @@ class Attention(torch.nn.Module):
         assert hidden_dim % num_heads == 0, "Hidden dim must be divisible by num heads"
 
         # key, query, value projections for all heads
-        self.c_attn = torch.nn.Linear(
-            hidden_dim, hidden_dim + 2 * hidden_dim // group_size, bias=bias
-        )
+        self.c_attn = torch.nn.Linear(hidden_dim, hidden_dim + 2 * hidden_dim // group_size, bias=bias)
 
         # output projection
         self.c_proj = torch.nn.Linear(hidden_dim, hidden_dim, bias=bias)
@@ -42,9 +40,7 @@ class Attention(torch.nn.Module):
         self.use_rope = use_rope
         if self.use_rope:
             assert context_window % 2 == 0
-            self.freqs_cis = compute_freqs_cis(
-                seq_len=context_window, head_dim=hidden_dim // num_heads
-            )
+            self.freqs_cis = compute_freqs_cis(seq_len=context_window, head_dim=hidden_dim // num_heads)
 
     def forward(self, x, attention_mask=None):
         """
@@ -62,22 +58,21 @@ class Attention(torch.nn.Module):
 
         q = q.view(B, S, self.num_heads, H // self.num_heads)  # (B, T, nh, hs)
         k = k.view(B, S, num_head_groups, H // self.num_heads)  # (B, T, nhg, hs)
-        v = v.view(B, Skv, num_head_groups, H // self.num_heads) # (B, T, nhg, hs)
+        v = v.view(B, Skv, num_head_groups, H // self.num_heads)  # (B, T, nhg, hs)
 
         if self.use_rope:
-            q, k = apply_rotary_emb(
-                q, k, freqs_cis=self.freqs_cis[:S].to(x.device))
+            q, k = apply_rotary_emb(q, k, freqs_cis=self.freqs_cis[:S].to(x.device))
 
         q = q.transpose(1, 2)  # (B, nh,  T, hs)
         k = k.transpose(1, 2)  # (B, nhg, T, hs)
         v = v.transpose(1, 2)  # (B, nhg, T, hs)
 
         # reshape to have same dim as q
-        k = k.repeat_interleave(self.group_size, dim=1) # (B, nhg * gs = nh, T, hs)
-        v = v.repeat_interleave(self.group_size, dim=1) # (B, nhg * gs = nh, T, hs)
+        k = k.repeat_interleave(self.group_size, dim=1)  # (B, nhg * gs = nh, T, hs)
+        v = v.repeat_interleave(self.group_size, dim=1)  # (B, nhg * gs = nh, T, hs)
 
         # unsqueeze attention for head groups
-        attention_mask = attention_mask.unsqueeze(1) if attention_mask is not None else None # (B, 1, T, T)
+        attention_mask = attention_mask.unsqueeze(1) if attention_mask is not None else None  # (B, 1, T, T)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         # flash attention
@@ -90,9 +85,7 @@ class Attention(torch.nn.Module):
             is_causal=False if attention_mask is not None else self.is_causal,
         )
 
-        y = (
-            y.transpose(1, 2).contiguous().view(B, Sq, H)
-        )  # re-assemble all head outputs side by side
+        y = y.transpose(1, 2).contiguous().view(B, Sq, H)  # re-assemble all head outputs side by side
 
         # output projection
         y = self.attn_dropout(self.c_proj(y))  # is this really necessary?
@@ -122,9 +115,7 @@ def apply_rotary_emb(xq, xk, freqs_cis):
 
 def compute_freqs_cis(seq_len, head_dim):
     """Computes complex frequences used for rotary positional encodings"""
-    freqs = 1.0 / (
-        10_000 ** (torch.arange(0, head_dim, 2)[: (head_dim // 2)].float() / head_dim)
-    )
+    freqs = 1.0 / (10_000 ** (torch.arange(0, head_dim, 2)[: (head_dim // 2)].float() / head_dim))
     t = torch.arange(seq_len * 2, device=freqs.device, dtype=torch.float32)
     freqs = torch.outer(t, freqs)
     freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex64

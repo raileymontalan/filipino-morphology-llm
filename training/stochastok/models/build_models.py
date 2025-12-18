@@ -4,11 +4,11 @@ core model, lm head and the model shell.
 """
 
 import torch
+from models.components.base_tokenizer import BaseTokenizer
 from models.core_models import GenericTransformer
 from models.embedding_models import Embedder
 from models.model_heads import AutoregressiveLMHead
 from models.model_shell import ModelShell
-from models.components.base_tokenizer import BaseTokenizer
 
 
 def build_model(model_cfg=None, checkpoint_path=None):
@@ -25,7 +25,6 @@ def build_model(model_cfg=None, checkpoint_path=None):
     """
     # check if model is to be loaded
     if checkpoint_path is not None:
-
         # load model with the correct architecture
         print(f"Loading model checkpoint from {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, weights_only=False)
@@ -33,13 +32,14 @@ def build_model(model_cfg=None, checkpoint_path=None):
 
         # load the model weights
         model.load_state_dict(checkpoint["model"])
-        
+
     else:
         # initialize model
-        print(f"Initializing model from scratch")
+        print("Initializing model from scratch")
         model = initialize_model(model_cfg)
 
     return model
+
 
 def initialize_model(model_cfg):
     """
@@ -68,8 +68,6 @@ def initialize_model(model_cfg):
         embedding_model.token_embedder.weight = model_head.linear.weight
 
     # build the model shell
-    model = ModelShell(
-        embedding_model=embedding_model, core_model=core_model, model_head=model_head
-    )
+    model = ModelShell(embedding_model=embedding_model, core_model=core_model, model_head=model_head)
 
     return model

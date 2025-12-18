@@ -2,7 +2,7 @@
 # Requirements for NeMo Framework Container Development
 # ============================================================================
 # NOTE: This file is for LOCAL DEVELOPMENT ONLY when NOT using the container.
-# 
+#
 # RECOMMENDED APPROACH:
 #   Use the NeMo Framework Container: nvcr.io/nvidia/nemo:25.11
 #   The container includes all training dependencies pre-installed:
@@ -75,8 +75,7 @@ openpyxl>=3.1.0
 pre-commit>=3.4.0
 pytest>=7.4.0
 black>=23.9.0
-isort>=5.12.0
-flake8>=6.1.0
+ruff>=0.14.0
 
 # Information theory & analysis
 scipy>=1.11.0

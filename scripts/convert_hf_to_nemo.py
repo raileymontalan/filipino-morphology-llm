@@ -10,11 +10,12 @@ Usage:
 """
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
+
 def main():
+    """Convert HuggingFace model checkpoint to NeMo format for training."""
     parser = argparse.ArgumentParser(description="Convert HF checkpoint to NeMo format")
     parser.add_argument(
         "--model",
@@ -34,6 +35,7 @@ def main():
     try:
         import nemo
         import nemo.collections.llm as llm
+
         print(f"Running in NeMo Framework {nemo.__version__}")
     except ImportError as e:
         print(f"Error: {e}")
@@ -77,7 +79,9 @@ def main():
         model = llm.LlamaModel(config=config)
     else:
         print(f"Error: Unknown model {args.model}")
-        print("Supported models: google/gemma-2-2b, google/gemma-2-9b, meta-llama/Llama-3.2-1B, meta-llama/Llama-3.2-3B")
+        print(
+            "Supported models: google/gemma-2-2b, google/gemma-2-9b, meta-llama/Llama-3.2-1B, meta-llama/Llama-3.2-3B"
+        )
         sys.exit(1)
 
     # Import checkpoint from HuggingFace
@@ -90,15 +94,16 @@ def main():
             source=f"hf://{args.model}",
             output_path=str(output_dir / args.model.replace("/", "_")),
         )
-        print(f"\n✓ Successfully converted checkpoint!")
+        print("\n✓ Successfully converted checkpoint!")
         print(f"  NeMo checkpoint saved to: {imported_path}")
-        print(f"\nTo use in training, run:")
-        print(f"  ./run_in_docker.sh torchrun --nproc_per_node=8 training/nemo/run_cpt.py \\")
+        print("\nTo use in training, run:")
+        print("  ./run_in_docker.sh torchrun --nproc_per_node=8 training/nemo/run_cpt.py \\")
         print(f"    --resume-from {imported_path} \\")
-        print(f"    --data-path /workspace/data/processed/vanilla/chunk_001_text_document ...")
+        print("    --data-path /workspace/data/processed/vanilla/chunk_001_text_document ...")
     except Exception as e:
         print(f"\n✗ Error converting checkpoint: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

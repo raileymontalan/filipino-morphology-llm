@@ -117,14 +117,14 @@ echo ""
 submit_eval_job() {
     local model_group=$1
     local models=$2
-    
+
     echo ""
     echo "Submitting job for: ${model_group}"
     echo "Models: ${models}"
-    
+
     # Create individual job script
     local job_script="${LOG_DIR}/eval_${model_group}.pbs"
-    
+
     cat > ${job_script} << 'EOFSCRIPT'
 #!/bin/bash
 #PBS -N eval_MODEL_GROUP
@@ -173,17 +173,17 @@ EOFSCRIPT
     sed -i "s|OUTPUT_DIR|${OUTPUT_DIR}|g" ${job_script}
     sed -i "s|YOUR_QUEUE_NAME|YOUR_QUEUE_NAME|g" ${job_script}
     sed -i "s|/path/to/your/logs/|/path/to/your/logs/|g" ${job_script}
-    
+
     if [ -n "${MAX_SAMPLES}" ]; then
         sed -i "s|MAX_SAMPLES_FLAG|--max-samples ${MAX_SAMPLES}|g" ${job_script}
     else
         sed -i "s|MAX_SAMPLES_FLAG||g" ${job_script}
     fi
-    
+
     # Submit job
     local job_id=$(qsub ${job_script})
     echo "  → Submitted as job: ${job_id}"
-    
+
     # Store job ID for tracking
     echo "${job_id} ${model_group}" >> ${LOG_DIR}/submitted_jobs.txt
 }

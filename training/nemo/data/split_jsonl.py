@@ -10,13 +10,12 @@ Usage:
 """
 
 import argparse
-import json
 from pathlib import Path
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Split JSONL into chunks")
-    
+
     parser.add_argument(
         "--input",
         type=str,
@@ -41,63 +40,63 @@ def parse_args():
         default="google/gemma-3-1b-pt",
         help="Tokenizer name (used for organizing output directory)",
     )
-    
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    
+
     input_path = Path(args.input)
-    
+
     # Create tokenizer-specific subdirectory
     tokenizer_name = args.tokenizer.replace("/", "-")
     output_dir = Path(args.output_dir) / tokenizer_name
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     print(f"Counting lines in {input_path}...")
-    with open(input_path, 'r') as f:
+    with open(input_path, "r") as f:
         total_lines = sum(1 for _ in f)
-    
+
     lines_per_chunk = (total_lines + args.num_chunks - 1) // args.num_chunks
-    
+
     print(f"Tokenizer: {args.tokenizer}")
     print(f"Total lines: {total_lines:,}")
     print(f"Chunks: {args.num_chunks}")
     print(f"Lines per chunk: ~{lines_per_chunk:,}")
     print()
-    
+
     print("Splitting file...")
     chunk_idx = 0
     line_count = 0
     output_file = None
-    
-    with open(input_path, 'r') as f:
+
+    with open(input_path, "r") as f:
         for line in f:
             if line_count % lines_per_chunk == 0:
                 if output_file:
                     output_file.close()
                 chunk_idx += 1
                 chunk_path = output_dir / f"chunk_{chunk_idx:04d}.jsonl"
-                output_file = open(chunk_path, 'w')
+                output_file = open(chunk_path, "w")
                 print(f"  Writing {chunk_path.name}...")
-            
+
             output_file.write(line)
             line_count += 1
-    
+
     if output_file:
         output_file.close()
-    
+
     print()
     print(f"✓ Created {chunk_idx} chunks in {output_dir}")
     print()
     print("Next steps:")
-    print(f"  1. Submit parallel preprocessing (recommended):")
+    print("  1. Submit parallel preprocessing (recommended):")
     print(f"     qsub -J 1-{chunk_idx} -v TOKENIZER={args.tokenizer} jobs/preprocess_data_parallel.pbs")
     print()
-    print(f"  2. Then use chunks in training:")
+    print("  2. Then use chunks in training:")
     print(f"     export DATA_PATH=$(training/nemo/data/generate_chunk_paths.sh {chunk_idx} {args.tokenizer})")
-    print(f"     qsub jobs/run_cpt.pbs")
+    print("     qsub jobs/run_cpt.pbs")
 
 
 if __name__ == "__main__":

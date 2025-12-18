@@ -3,7 +3,6 @@
 Each loss function should take in output of a model and the target labels
 and return the loss value. This need not be the logits."""
 
-
 import torch
 
 
@@ -23,7 +22,7 @@ def cross_entropy_loss_fn(logits, y, mask=None, mean_with_mask_length=True):
     else:
         loss = (losses * mask).mean(-1)
     with torch.no_grad():
-        logps = torch.nn.functional.log_softmax(logits, dim=-1) 
+        logps = torch.nn.functional.log_softmax(logits, dim=-1)
         entropy = -torch.sum(logps * torch.exp(logps), dim=-1)
         metrics = {
             "loss": loss.mean().item(),
@@ -32,4 +31,3 @@ def cross_entropy_loss_fn(logits, y, mask=None, mean_with_mask_length=True):
         }
     metrics = {f"loss/{k}": v for k, v in metrics.items()}
     return loss.mean(), metrics
-

@@ -1,5 +1,5 @@
 """
-Benchmark Generation Module
+Benchmark Generation Module.
 
 This module contains scripts for generating various evaluation benchmarks:
 - PACUTE: Philippine morphological understanding benchmarks

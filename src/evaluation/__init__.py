@@ -1,5 +1,5 @@
 """
-Evaluation package for Filipino morphology LLM
+Evaluation package for Filipino morphology LLM.
 
 Contains modules for dataset generation, evaluation, and analysis.
 """

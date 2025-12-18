@@ -1,9 +1,17 @@
-from datasets import load_dataset
+"""
+Download and convert SEA-PILE-v2 Tagalog dataset to JSONL format.
+
+This script downloads the Filipino/Tagalog portion of the SEA-PILE-v2 dataset
+and converts it to JSONL format required by NeMo training pipelines.
+"""
+
 import json
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from datasets import load_dataset
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Load the SEA-PILE-v2 dataset
 dataset = load_dataset("aisingapore/SEA-PILE-v2", data_dir="tl", split="train")

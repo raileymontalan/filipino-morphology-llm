@@ -88,11 +88,11 @@ echo ""
 
 submit_eval_job() {
     local model_name=$1
-    
+
     echo "Submitting: ${model_name}"
-    
+
     local job_script="${TEMP_DIR}/eval_${model_name}.pbs"
-    
+
     # Create job script
     cat > ${job_script} << EOF
 #!/bin/bash
@@ -132,7 +132,7 @@ fi
 
 exit \${exit_code}
 EOF
-    
+
     # Submit job
     local job_id=$(qsub ${job_script})
     echo "  → Submitted: ${job_id}"

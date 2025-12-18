@@ -9,12 +9,12 @@ Deprecated:
 - PatokProcessor: Use MorphologyAwarePatokProcessor instead
 """
 
-from .patok_morphology import MorphologyAwarePatokProcessor
-from .stochastok_processor import StochastokProcessor
 from .affix_decomposition import AffixDecomposer, AffixDecomposition, compare_tokenizers
+from .patok_morphology import MorphologyAwarePatokProcessor
 
 # Deprecated - import triggers warning
 from .patok_processor import PatokProcessor
+from .stochastok_processor import StochastokProcessor
 
 __all__ = [
     # Recommended

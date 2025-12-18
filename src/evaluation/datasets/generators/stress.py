@@ -1,5 +1,5 @@
 """
-Context-Dependent Stress Tasks
+Context-Dependent Stress Tasks.
 
 Tests understanding of stress patterns that distinguish homographs.
 Filipino words like "pala" can have different meanings and stress patterns
@@ -14,8 +14,8 @@ Stress patterns:
 
 import json
 import random
-from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
+from typing import Any, Dict, List
 
 
 def load_homographs(syllables_file: str) -> Dict[str, List[Dict]]:
@@ -30,14 +30,14 @@ def load_homographs(syllables_file: str) -> Dict[str, List[Dict]]:
     with open(syllables_file) as f:
         for line in f:
             data = json.loads(line)
-            normalized = data.get('normalized_word', '').lower()
+            normalized = data.get("normalized_word", "").lower()
             if normalized:
                 word_entries[normalized].append(data)
 
     # Filter to only homographs (multiple stress patterns)
     homographs = {}
     for word, entries in word_entries.items():
-        stress_patterns = set(e.get('last_syllable_pronunciation', '') for e in entries)
+        stress_patterns = set(e.get("last_syllable_pronunciation", "") for e in entries)
         if len(stress_patterns) > 1:
             homographs[word] = entries
 
@@ -52,43 +52,39 @@ def create_synthetic_context(word: str, sense: str, pos: str) -> str:
     """
     # Simple sentence templates by part of speech
     templates = {
-        'pnb': [  # pangngalan (noun)
-            f'Ang {word} ay ...',
-            f'May {word} sa ...',
-            f'Nakita ko ang {word}.',
+        "pnb": [  # pangngalan (noun)
+            f"Ang {word} ay ...",
+            f"May {word} sa ...",
+            f"Nakita ko ang {word}.",
         ],
-        'pdw': [  # pang-abay (adverb)
-            f'{word.capitalize()} ako ...',
-            f'Umuwi {word} ...',
-            f'{word.capitalize()} siyang ...',
+        "pdw": [  # pang-abay (adverb)
+            f"{word.capitalize()} ako ...",
+            f"Umuwi {word} ...",
+            f"{word.capitalize()} siyang ...",
         ],
-        'pdd': [  # pandamdam (interjection)
-            f'{word.capitalize()}!',
+        "pdd": [  # pandamdam (interjection)
+            f"{word.capitalize()}!",
             f'Sabi niya, "{word.capitalize()}!"',
         ],
-        'pnr': [  # pang-uri (adjective)
-            f'{word.capitalize()} ang ...',
-            f'May {word} na ...',
+        "pnr": [  # pang-uri (adjective)
+            f"{word.capitalize()} ang ...",
+            f"May {word} na ...",
         ],
-        'pkw': [  # pandiwa (verb)
-            f'Gusto kong {word}.',
-            f'Kailangan {word} ...',
-            f'Ayaw {word} ...',
+        "pkw": [  # pandiwa (verb)
+            f"Gusto kong {word}.",
+            f"Kailangan {word} ...",
+            f"Ayaw {word} ...",
         ],
     }
 
     # Get templates for this part of speech
-    pos_templates = templates.get(pos, templates['pnb'])
+    pos_templates = templates.get(pos, templates["pnb"])
     return random.choice(pos_templates)
 
 
-def create_stress_identification_task(
-    word: str,
-    entries: List[Dict],
-    format: str = "mcq"
-) -> Dict[str, Any]:
+def create_stress_identification_task(word: str, entries: List[Dict], format: str = "mcq") -> Dict[str, Any]:
     """
-    Create task: "Which syllable has stress in 'pala' in this context?"
+    Create task: "Which syllable has stress in 'pala' in this context?".
 
     Example:
         Context: "Nandiyan ka na pala."
@@ -98,12 +94,12 @@ def create_stress_identification_task(
     # Pick one entry randomly
     entry = random.choice(entries)
 
-    normalized = entry['normalized_word']
-    accented = entry['word']
-    syllables = entry['normalized_syllable_list']
-    stress_index = entry.get('accented_syllable_index', 0)
-    sense = entry.get('word_sense', '')[:80]
-    pos = entry.get('part_of_speech', 'pnb')
+    normalized = entry["normalized_word"]
+    accented = entry["word"]
+    syllables = entry["normalized_syllable_list"]
+    stress_index = entry.get("accented_syllable_index", 0)
+    sense = entry.get("word_sense", "")[:80]
+    pos = entry.get("part_of_speech", "pnb")
 
     # Create context
     context = create_synthetic_context(normalized, sense, pos)
@@ -159,13 +155,9 @@ def create_stress_identification_task(
         }
 
 
-def create_stress_classification_task(
-    word: str,
-    entries: List[Dict],
-    format: str = "mcq"
-) -> Dict[str, Any]:
+def create_stress_classification_task(word: str, entries: List[Dict], format: str = "mcq") -> Dict[str, Any]:
     """
-    Create task: "What type of stress does 'pala' have in this context?"
+    Create task: "What type of stress does 'pala' have in this context?".
 
     Example:
         Context: "Nandiyan ka na pala."
@@ -175,11 +167,11 @@ def create_stress_classification_task(
     # Pick one entry randomly
     entry = random.choice(entries)
 
-    normalized = entry['normalized_word']
-    accented = entry['word']
-    stress_type = entry.get('last_syllable_pronunciation', 'malumay')
-    sense = entry.get('word_sense', '')[:80]
-    pos = entry.get('part_of_speech', 'pnb')
+    normalized = entry["normalized_word"]
+    accented = entry["word"]
+    stress_type = entry.get("last_syllable_pronunciation", "malumay")
+    sense = entry.get("word_sense", "")[:80]
+    pos = entry.get("part_of_speech", "pnb")
 
     # Create context
     context = create_synthetic_context(normalized, sense, pos)
@@ -190,10 +182,10 @@ def create_stress_classification_task(
 
     # Stress type mappings
     stress_labels = {
-        'mabilis': 'mabilis (acute á)',
-        'malumi': 'malumi (grave à)',
-        'maragsa': 'maragsa (circumflex â)',
-        'malumay': 'malumay (unmarked)'
+        "mabilis": "mabilis (acute á)",
+        "malumi": "malumi (grave à)",
+        "maragsa": "maragsa (circumflex â)",
+        "malumay": "malumay (unmarked)",
     }
 
     answer = stress_labels.get(stress_type, stress_type)
@@ -229,11 +221,7 @@ def create_stress_classification_task(
         }
 
 
-def create_deaccent_task(
-    word: str,
-    entries: List[Dict],
-    format: str = "mcq"
-) -> Dict[str, Any]:
+def create_deaccent_task(word: str, entries: List[Dict], format: str = "mcq") -> Dict[str, Any]:
     """
     Create task: Given context, provide the correctly accented form.
 
@@ -246,23 +234,25 @@ def create_deaccent_task(
     # Pick one entry randomly
     entry = random.choice(entries)
 
-    normalized = entry['normalized_word']
-    accented = entry['word']
-    sense = entry.get('word_sense', '')[:80]
-    pos = entry.get('part_of_speech', 'pnb')
+    normalized = entry["normalized_word"]
+    accented = entry["word"]
+    sense = entry.get("word_sense", "")[:80]
+    pos = entry.get("part_of_speech", "pnb")
 
     # Create context
     context = create_synthetic_context(normalized, sense, pos)
 
     # Prompts
     prompt_en = f'How should the word "{normalized}" be written with proper accent marks in this context: "{context}"?'
-    prompt_tl = f'Paano isusulat ang salitang "{normalized}" na may tamang marka ng diin sa pangungusap na: "{context}"?'
+    prompt_tl = (
+        f'Paano isusulat ang salitang "{normalized}" na may tamang marka ng diin sa pangungusap na: "{context}"?'
+    )
 
     answer = accented
 
     if format == "mcq":
         # Options: all variants of this word with different accents
-        options = [e['word'] for e in entries if e['word'] != accented]
+        options = [e["word"] for e in entries if e["word"] != accented]
 
         # If we don't have enough variants, create some
         while len(options) < 3:
@@ -293,12 +283,7 @@ def create_deaccent_task(
         }
 
 
-def generate_stress_benchmark(
-    syllables_file: str,
-    output_file: str,
-    n_per_task: int = 100,
-    format: str = "mcq"
-):
+def generate_stress_benchmark(syllables_file: str, output_file: str, n_per_task: int = 100, format: str = "mcq"):
     """
     Generate stress task benchmark.
 
@@ -337,29 +322,29 @@ def generate_stress_benchmark(
 
     # Save
     print(f"\nSaving {len(all_tasks)} tasks to {output_file}...")
-    with open(output_file, 'w') as f:
+    with open(output_file, "w") as f:
         for task in all_tasks:
-            f.write(json.dumps(task, ensure_ascii=False) + '\n')
+            f.write(json.dumps(task, ensure_ascii=False) + "\n")
 
     print(f"✓ Generated {len(all_tasks)} {format} stress tasks")
-    print(f"\nTask breakdown:")
+    print("\nTask breakdown:")
     print(f"  - Stress identification: {n_per_task}")
     print(f"  - Stress classification: {n_per_task}")
     print(f"  - De-accent: {n_per_task}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Generate MCQ and generative versions
     generate_stress_benchmark(
-        syllables_file='data/corpora/pacute_data/syllables.jsonl',
-        output_file='data/benchmarks/stress_mcq.jsonl',
+        syllables_file="data/corpora/pacute_data/syllables.jsonl",
+        output_file="data/benchmarks/stress_mcq.jsonl",
         n_per_task=100,
-        format='mcq'
+        format="mcq",
     )
 
     generate_stress_benchmark(
-        syllables_file='data/corpora/pacute_data/syllables.jsonl',
-        output_file='data/benchmarks/stress_gen.jsonl',
+        syllables_file="data/corpora/pacute_data/syllables.jsonl",
+        output_file="data/benchmarks/stress_gen.jsonl",
         n_per_task=100,
-        format='gen'
+        format="gen",
     )

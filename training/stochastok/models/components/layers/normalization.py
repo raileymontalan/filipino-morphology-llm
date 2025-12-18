@@ -7,9 +7,12 @@ from torch.nn import functional as F
 
 
 class LayerNorm(torch.nn.Module):
-    """LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False"""
+    """
+    LayerNorm but with an optional bias.
 
-    # taken from nanoGPT
+    PyTorch doesn't support simply bias=False.
+    """
+
     def __init__(self, dim, bias):
         super().__init__()
         self.weight = torch.nn.Parameter(torch.ones(dim))
@@ -22,20 +25,23 @@ class LayerNorm(torch.nn.Module):
 
 class RMSNorm(torch.nn.Module):
     """
-    RMSNorm (https://arxiv.org/abs/1910.07467), implementation from
-    https://github.com/meta-llama/llama3/blob/main/llama/model.py
+    RMSNorm (https://arxiv.org/abs/1910.07467).
+
+    Implementation from https://github.com/meta-llama/llama3/blob/main/llama/model.py
     """
 
     def __init__(self, dim: int, eps: float = 1e-6):
+        """Initialize RMSNorm layer."""
         super().__init__()
         self.eps = eps
         self.weight = torch.nn.Parameter(torch.ones(dim))
 
     def _norm(self, x):
+        """Normalize input tensor x using RMSNorm."""
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
     def forward(self, x):
-        """Apply RMSNorm"""
+        """Apply RMSNorm."""
         output = self._norm(x.float()).type_as(x)
         return output * self.weight
 
@@ -49,7 +55,8 @@ NORMALIZATION_DICT = {
 
 def build_normalization(normalization_name, dim, bias=None):
     """
-    Build the normalization layer
+    Build the normalization layer.
+
     Available options: rmsnorm, layernorm
         - Bias is ignored for RMSNorm
     """

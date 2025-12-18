@@ -1,4 +1,4 @@
-"""Filipino Morphology-Aware Language Modeling
+"""Filipino Morphology-Aware Language Modeling.
 
 A unified framework for training and evaluating morphologically-aware
 tokenization methods for Filipino and other morphologically-rich languages.

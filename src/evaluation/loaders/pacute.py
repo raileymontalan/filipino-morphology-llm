@@ -8,9 +8,10 @@ Full morphological understanding benchmark covering:
 - Syllabification (160 MCQ items)
 Total: 1,040 MCQ tasks
 """
+
 import json
-import random
 import os
+import random
 
 
 def load_pacute(split="test", categories=None, **kwargs):
@@ -37,7 +38,7 @@ def load_pacute(split="test", categories=None, **kwargs):
 
     # Default to all categories
     if categories is None:
-        categories = ['affixation', 'composition', 'manipulation', 'syllabification']
+        categories = ["affixation", "composition", "manipulation", "syllabification"]
 
     tasks = []
     category_counts = {}
@@ -53,7 +54,7 @@ def load_pacute(split="test", categories=None, **kwargs):
         with open(mcq_file) as f:
             for line in f:
                 task = json.loads(line)
-                task['_category'] = category  # Track source category
+                task["_category"] = category  # Track source category
                 tasks.append(task)
                 count += 1
 
@@ -80,7 +81,7 @@ def load_pacute(split="test", categories=None, **kwargs):
         false_options = [
             mcq_options["incorrect1"],
             mcq_options["incorrect2"],
-            mcq_options["incorrect3"]
+            mcq_options["incorrect3"],
         ]
 
         yield prefix, ground_truth, false_options, sample_id

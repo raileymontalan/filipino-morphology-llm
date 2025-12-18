@@ -1,5 +1,5 @@
 """
-Create Morpheme Annotations for Hierarchical Tasks
+Create Morpheme Annotations for Hierarchical Tasks.
 
 Generates a dataset of Filipino words with morpheme boundary annotations.
 Uses inflections data and syllabified words to create annotations for:
@@ -20,10 +20,10 @@ Output format (JSONL):
 """
 
 import json
-import pandas as pd
-import re
-from typing import List, Dict, Optional, Tuple
 from collections import defaultdict
+from typing import Dict, List, Optional, Tuple
+
+import pandas as pd
 
 
 def load_affixes(affixes_file: str) -> List[str]:
@@ -101,9 +101,9 @@ def annotate_from_inflections(inflections_df: pd.DataFrame) -> List[Dict]:
     annotations = []
 
     for _, row in inflections_df.iterrows():
-        root = str(row['root']).lower()
-        inflected = str(row['inflected']).lower()
-        aspect_affix = row['aspect_affix']
+        root = str(row["root"]).lower()
+        inflected = str(row["inflected"]).lower()
+        aspect_affix = row["aspect_affix"]
 
         if pd.isna(aspect_affix):
             continue
@@ -119,8 +119,8 @@ def annotate_from_inflections(inflections_df: pd.DataFrame) -> List[Dict]:
             "root": root,
             "affix": affix,
             "affix_type": affix_type,
-            "aspect": str(row['aspect']),
-            "focus": str(row['focus']),
+            "aspect": str(row["aspect"]),
+            "focus": str(row["focus"]),
         }
 
         if affix_type == "prefix":
@@ -162,11 +162,7 @@ def annotate_from_inflections(inflections_df: pd.DataFrame) -> List[Dict]:
     return annotations
 
 
-def find_affixed_words_in_syllables(
-    syllables_file: str,
-    affixes: List[str],
-    max_per_affix: int = 10
-) -> List[Dict]:
+def find_affixed_words_in_syllables(syllables_file: str, affixes: List[str], max_per_affix: int = 10) -> List[Dict]:
     """
     Find words in syllables.jsonl that contain known affixes.
     Creates simple annotations for prefix matches.
@@ -177,7 +173,7 @@ def find_affixed_words_in_syllables(
     with open(syllables_file) as f:
         for line in f:
             data = json.loads(line)
-            word = data.get('normalized_word', '').lower()
+            word = data.get("normalized_word", "").lower()
 
             if not word or len(word) < 4:
                 continue
@@ -188,7 +184,7 @@ def find_affixed_words_in_syllables(
                     continue
 
                 if word.startswith(affix) and len(word) > len(affix):
-                    root = word[len(affix):]
+                    root = word[len(affix) :]
 
                     # Simple heuristic: root should be at least 2 chars
                     if len(root) >= 2:
@@ -201,7 +197,7 @@ def find_affixed_words_in_syllables(
                             "morpheme_types": ["prefix", "root"],
                             "boundaries": [len(affix)],
                             "source": "syllables_heuristic",
-                            "syllables": data.get('normalized_syllable_list', []),
+                            "syllables": data.get("normalized_syllable_list", []),
                         }
                         annotations.append(annotation)
                         affix_counts[affix] += 1
@@ -211,16 +207,17 @@ def find_affixed_words_in_syllables(
 
 
 def main():
+    """Create morpheme annotations for hierarchical tasks."""
     print("Creating affix annotations...")
     print()
 
     # Load data
     print("1. Loading inflections data...")
-    inflections_df = pd.read_excel('data/corpora/pacute_data/inflections.xlsx')
+    inflections_df = pd.read_excel("data/corpora/pacute_data/inflections.xlsx")
     print(f"   Loaded {len(inflections_df)} inflections")
 
     print("2. Loading affixes...")
-    affixes = load_affixes('data/affixes/filipino_affixes.txt')
+    affixes = load_affixes("data/affixes/filipino_affixes.txt")
     print(f"   Loaded {len(affixes)} affixes")
 
     # Create annotations from inflections
@@ -231,9 +228,7 @@ def main():
     # Find more examples in syllables data
     print("4. Finding affixed words in syllables data...")
     syllable_annotations = find_affixed_words_in_syllables(
-        'data/corpora/pacute_data/syllables.jsonl',
-        affixes,
-        max_per_affix=10
+        "data/corpora/pacute_data/syllables.jsonl", affixes, max_per_affix=10
     )
     print(f"   Created {len(syllable_annotations)} annotations from syllables")
 
@@ -244,9 +239,9 @@ def main():
     seen_words = set()
     unique_annotations = []
     for ann in all_annotations:
-        if ann['word'] not in seen_words:
+        if ann["word"] not in seen_words:
             unique_annotations.append(ann)
-            seen_words.add(ann['word'])
+            seen_words.add(ann["word"])
 
     print(f"5. Total unique annotations: {len(unique_annotations)}")
 
@@ -255,16 +250,16 @@ def main():
     print("Annotation Statistics:")
     by_type = defaultdict(int)
     for ann in unique_annotations:
-        by_type[ann['affix_type']] += 1
+        by_type[ann["affix_type"]] += 1
 
     for affix_type, count in sorted(by_type.items()):
         print(f"  {affix_type}: {count}")
 
     # Save
-    output_file = 'data/corpora/affix_annotations.jsonl'
-    with open(output_file, 'w') as f:
+    output_file = "data/corpora/affix_annotations.jsonl"
+    with open(output_file, "w") as f:
         for ann in unique_annotations:
-            f.write(json.dumps(ann, ensure_ascii=False) + '\n')
+            f.write(json.dumps(ann, ensure_ascii=False) + "\n")
 
     print()
     print(f"✓ Saved annotations to {output_file}")
@@ -278,10 +273,10 @@ def main():
         print(f"  Morphemes: {' + '.join(ann['morphemes'])}")
         print(f"  Types: {' + '.join(ann['morpheme_types'])}")
         print(f"  Affix: {ann['affix']} ({ann['affix_type']})")
-        if 'boundaries' in ann:
+        if "boundaries" in ann:
             print(f"  Boundaries: {ann['boundaries']}")
         print()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

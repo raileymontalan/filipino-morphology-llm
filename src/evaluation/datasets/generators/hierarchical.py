@@ -1,5 +1,5 @@
 """
-Hierarchical Task Framework for PACUTE
+Hierarchical Task Framework for PACUTE.
 
 Organizes evaluation tasks into 6 levels that build compositionally,
 enabling diagnosis of specific capability failures.
@@ -17,17 +17,12 @@ This creates a diagnostic cascade that pinpoints the source of errors.
 
 import json
 import random
-from typing import Dict, List, Tuple, Optional, Literal
 from dataclasses import dataclass, field
+from typing import Dict, List, Literal, Optional
+
 import pandas as pd
 
-from ...utils.strings import (
-    spell_string,
-    chars_to_string,
-    string_to_chars,
-)
 from ...utils.syllabification import syllabify
-from ...utils.helpers import prepare_mcq_outputs, prepare_gen_outputs
 
 
 # Simple position-specific operations for hierarchical tasks
@@ -35,21 +30,21 @@ def delete_character(word: str, position: int) -> str:
     """Delete character at position (1-indexed)."""
     if position < 1 or position > len(word):
         return word
-    return word[:position-1] + word[position:]
+    return word[: position - 1] + word[position:]
 
 
 def insert_character(word: str, position: int, char: str) -> str:
     """Insert character at position (1-indexed)."""
     if position < 1 or position > len(word) + 1:
         return word
-    return word[:position-1] + char + word[position-1:]
+    return word[: position - 1] + char + word[position - 1 :]
 
 
 def substitute_character(word: str, position: int, new_char: str) -> str:
     """Substitute character at position (1-indexed)."""
     if position < 1 or position > len(word):
         return word
-    return word[:position-1] + new_char + word[position:]
+    return word[: position - 1] + new_char + word[position:]
 
 
 def permute_characters(word: str, pos1: int, pos2: int) -> str:
@@ -57,13 +52,14 @@ def permute_characters(word: str, pos1: int, pos2: int) -> str:
     if pos1 < 1 or pos1 > len(word) or pos2 < 1 or pos2 > len(word):
         return word
     chars = list(word)
-    chars[pos1-1], chars[pos2-1] = chars[pos2-1], chars[pos1-1]
-    return ''.join(chars)
+    chars[pos1 - 1], chars[pos2 - 1] = chars[pos2 - 1], chars[pos1 - 1]
+    return "".join(chars)
 
 
 @dataclass
 class HierarchicalTask:
     """A task with hierarchical level metadata."""
+
     level: int  # 0-5
     category: str  # e.g., "affixation", "composition", "manipulation"
     subcategory: str  # e.g., "character_deletion", "affix_identification"
@@ -140,8 +136,8 @@ class HierarchicalTaskGenerator:
 
             position = random.randint(1, len(word))
             answer = word[position - 1]
-
-            prompt_en = f"What is the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character in '{word}'?"
+            ordinal = "st" if position == 1 else "nd" if position == 2 else "rd" if position == 3 else "th"
+            prompt_en = f"What is the {position}{ordinal} character in '{word}'?"
             prompt_tl = f"Ano ang ika-{position} karakter sa salitang '{word}'?"
 
             if format == "mcq":
@@ -155,17 +151,19 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=0,
-                category="recognition",
-                subcategory="character_identification",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"position": position}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=0,
+                    category="recognition",
+                    subcategory="character_identification",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={"position": position},
+                )
+            )
 
         return tasks
 
@@ -204,17 +202,19 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=0,
-                category="recognition",
-                subcategory="character_counting",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"target_char": char, "count": count}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=0,
+                    category="recognition",
+                    subcategory="character_counting",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={"target_char": char, "count": count},
+                )
+            )
 
         return tasks
 
@@ -235,7 +235,6 @@ class HierarchicalTaskGenerator:
                 # Positive example: char is in word
                 char = random.choice(word)
                 answer = "Yes"
-                answer_tl = "Oo"
             else:
                 # Negative example: char not in word
                 all_chars = set("abcdefghijklmnopqrstuvwxyzáàâéèêíìîóòôúùû")
@@ -244,7 +243,6 @@ class HierarchicalTaskGenerator:
                     continue
                 char = random.choice(not_in_word)
                 answer = "No"
-                answer_tl = "Hindi"
 
             prompt_en = f"Does '{word}' contain the character '{char}'?"
             prompt_tl = f"May '{char}' ba sa salitang '{word}'?"
@@ -255,17 +253,19 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=0,
-                category="recognition",
-                subcategory="character_presence",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"target_char": char, "present": answer == "Yes"}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=0,
+                    category="recognition",
+                    subcategory="character_presence",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={"target_char": char, "present": answer == "Yes"},
+                )
+            )
 
         return tasks[:n]
 
@@ -293,7 +293,8 @@ class HierarchicalTaskGenerator:
             position = random.randint(1, len(word))
             answer = delete_character(word, position)
 
-            prompt_en = f"Delete the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character from '{word}'."
+            ordinal = "st" if position == 1 else "nd" if position == 2 else "rd" if position == 3 else "th"
+            prompt_en = f"Delete the {position}{ordinal} character from '{word}'."
             prompt_tl = f"Tanggalin ang ika-{position} karakter mula sa salitang '{word}'."
 
             if format == "mcq":
@@ -307,17 +308,19 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=1,
-                category="manipulation",
-                subcategory="character_deletion",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"position": position, "operation": "delete"}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=1,
+                    category="manipulation",
+                    subcategory="character_deletion",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={"position": position, "operation": "delete"},
+                )
+            )
 
         return tasks
 
@@ -351,17 +354,23 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=1,
-                category="manipulation",
-                subcategory="character_insertion",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"position": position, "char": char_to_insert, "operation": "insert"}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=1,
+                    category="manipulation",
+                    subcategory="character_insertion",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={
+                        "position": position,
+                        "char": char_to_insert,
+                        "operation": "insert",
+                    },
+                )
+            )
 
         return tasks
 
@@ -385,7 +394,8 @@ class HierarchicalTaskGenerator:
             new_char = random.choice([c for c in "abcdefghilmnoprstuy" if c != old_char])
             answer = substitute_character(word, position, new_char)
 
-            prompt_en = f"Replace the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character in '{word}' with '{new_char}'."
+            ordinal = "st" if position == 1 else "nd" if position == 2 else "rd" if position == 3 else "th"
+            prompt_en = f"Replace the {position}{ordinal} character in '{word}' with '{new_char}'."
             prompt_tl = f"Palitan ang ika-{position} karakter sa salitang '{word}' ng '{new_char}'."
 
             if format == "mcq":
@@ -402,17 +412,24 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=1,
-                category="manipulation",
-                subcategory="character_substitution",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"position": position, "old_char": old_char, "new_char": new_char, "operation": "substitute"}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=1,
+                    category="manipulation",
+                    subcategory="character_substitution",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={
+                        "position": position,
+                        "old_char": old_char,
+                        "new_char": new_char,
+                        "operation": "substitute",
+                    },
+                )
+            )
 
         return tasks
 
@@ -432,7 +449,6 @@ class HierarchicalTaskGenerator:
         words = valid_words.sample(n)["word"].tolist()
 
         for word in words:
-
             pos1, pos2 = random.sample(range(1, len(word) + 1), 2)
             if pos1 > pos2:
                 pos1, pos2 = pos2, pos1
@@ -454,17 +470,19 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=1,
-                category="manipulation",
-                subcategory="character_permutation",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"pos1": pos1, "pos2": pos2, "operation": "permute"}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=1,
+                    category="manipulation",
+                    subcategory="character_permutation",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={"pos1": pos1, "pos2": pos2, "operation": "permute"},
+                )
+            )
 
         return tasks
 
@@ -523,23 +541,27 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=2,
-                category="decomposition",
-                subcategory=f"affix_identification_{affix_type}",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"affix_type": affix_type, "affix": affix, "root": row.get("root", "")}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=2,
+                    category="decomposition",
+                    subcategory=f"affix_identification_{affix_type}",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={
+                        "affix_type": affix_type,
+                        "affix": affix,
+                        "root": row.get("root", ""),
+                    },
+                )
+            )
 
         return tasks
 
-    def generate_level2_root_extraction(
-        self, n: int, format: Literal["mcq", "gen"] = "gen"
-    ) -> List[HierarchicalTask]:
+    def generate_level2_root_extraction(self, n: int, format: Literal["mcq", "gen"] = "gen") -> List[HierarchicalTask]:
         """
         Level 2: Extract the root from an affixed word.
 
@@ -567,21 +589,26 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=2,
-                category="decomposition",
-                subcategory="root_extraction",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"root": answer, "affixes": {
-                    "prefix": row.get("prefix", ""),
-                    "infix": row.get("infix", ""),
-                    "suffix": row.get("suffix", "")
-                }}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=2,
+                    category="decomposition",
+                    subcategory="root_extraction",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={
+                        "root": answer,
+                        "affixes": {
+                            "prefix": row.get("prefix", ""),
+                            "infix": row.get("infix", ""),
+                            "suffix": row.get("suffix", ""),
+                        },
+                    },
+                )
+            )
 
         return tasks
 
@@ -618,17 +645,19 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=2,
-                category="decomposition",
-                subcategory="syllable_counting",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"syllables": syllables, "count": count}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=2,
+                    category="decomposition",
+                    subcategory="syllable_counting",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={"syllables": syllables, "count": count},
+                )
+            )
 
         return tasks
 
@@ -636,9 +665,7 @@ class HierarchicalTaskGenerator:
     # LEVEL 3: MORPHEME MANIPULATION
     # ========================================================================
 
-    def generate_level3_affix_removal(
-        self, n: int, format: Literal["mcq", "gen"] = "gen"
-    ) -> List[HierarchicalTask]:
+    def generate_level3_affix_removal(self, n: int, format: Literal["mcq", "gen"] = "gen") -> List[HierarchicalTask]:
         """
         Level 3: Remove an affix from a word.
 
@@ -690,17 +717,23 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=3,
-                category="manipulation",
-                subcategory=f"affix_removal_{affix_type}",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"affix_type": affix_type, "original_word": word, "operation": "remove_affix"}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=3,
+                    category="manipulation",
+                    subcategory=f"affix_removal_{affix_type}",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={
+                        "affix_type": affix_type,
+                        "original_word": word,
+                        "operation": "remove_affix",
+                    },
+                )
+            )
 
         return tasks
 
@@ -762,17 +795,24 @@ class HierarchicalTaskGenerator:
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=4,
-                category="composition",
-                subcategory=f"affix_application_{affix_type}",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word,
-                metadata={"affix_type": affix_type, "affix": affix, "root": root, "operation": "apply_affix"}
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=4,
+                    category="composition",
+                    subcategory=f"affix_application_{affix_type}",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word,
+                    metadata={
+                        "affix_type": affix_type,
+                        "affix": affix,
+                        "root": root,
+                        "operation": "apply_affix",
+                    },
+                )
+            )
 
         return tasks
 
@@ -830,30 +870,32 @@ class HierarchicalTaskGenerator:
                 distractors = [
                     word1,  # Original word (didn't transform)
                     root1,  # Just the root (incomplete transformation)
-                    affix + word1 if affix_type == "prefix" else word1 + affix,  # Applied to wrong form
+                    (affix + word1 if affix_type == "prefix" else word1 + affix),  # Applied to wrong form
                 ]
                 options = [answer] + distractors[:3]
                 random.shuffle(options)
             else:
                 options = None
 
-            tasks.append(HierarchicalTask(
-                level=5,
-                category="reasoning",
-                subcategory="multi_step_transformation",
-                prompt_en=prompt_en,
-                prompt_tl=prompt_tl,
-                answer=answer,
-                options=options,
-                word=word1,
-                metadata={
-                    "original_word": word1,
-                    "root": root1,
-                    "target_affix_type": affix_type,
-                    "target_affix": affix,
-                    "operation": "extract_root_then_apply_affix"
-                }
-            ))
+            tasks.append(
+                HierarchicalTask(
+                    level=5,
+                    category="reasoning",
+                    subcategory="multi_step_transformation",
+                    prompt_en=prompt_en,
+                    prompt_tl=prompt_tl,
+                    answer=answer,
+                    options=options,
+                    word=word1,
+                    metadata={
+                        "original_word": word1,
+                        "root": root1,
+                        "target_affix_type": affix_type,
+                        "target_affix": affix,
+                        "operation": "extract_root_then_apply_affix",
+                    },
+                )
+            )
 
         return tasks[:n]
 
@@ -864,7 +906,7 @@ class HierarchicalTaskGenerator:
     def generate_all_levels(
         self,
         n_per_subcategory: int = 20,
-        format: Literal["mcq", "gen", "both"] = "both"
+        format: Literal["mcq", "gen", "both"] = "both",
     ) -> Dict[int, List[HierarchicalTask]]:
         """
         Generate complete hierarchical task suite.
@@ -908,9 +950,15 @@ class HierarchicalTaskGenerator:
 
         return tasks_by_level
 
-    def save_tasks(self, tasks_by_level: Dict[int, List[HierarchicalTask]], output_dir: str, format: str = "mcq"):
+    def save_tasks(
+        self,
+        tasks_by_level: Dict[int, List[HierarchicalTask]],
+        output_dir: str,
+        format: str = "mcq",
+    ):
         """Save tasks to JSONL files organized by level."""
         import os
+
         os.makedirs(output_dir, exist_ok=True)
 
         for level, tasks in tasks_by_level.items():

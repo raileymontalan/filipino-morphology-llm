@@ -1,5 +1,5 @@
 """
-CUTE: Character Understanding Test Evaluation
+CUTE: Character Understanding Test Evaluation.
 
 Tests character-level understanding through orthographic manipulation tasks.
 Based on Edman et al. (2024) "CUTE: Measuring LLMs' Understanding of Their Tokens"
@@ -13,6 +13,7 @@ Total: 14,000 examples (1,000 per task)
 
 Dataset: https://huggingface.co/datasets/leukas/cute
 """
+
 import random
 
 
@@ -39,21 +40,32 @@ def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
     """
     import json
     from pathlib import Path
-    
+
     # Load from local JSONL file
     jsonl_path = Path("data/benchmarks/cute_gen.jsonl")
-    
+
     if not jsonl_path.exists():
         raise FileNotFoundError(
             f"CUTE benchmark file not found: {jsonl_path}\n"
-            f"Generate it with: python src/evaluation/datasets/scripts/generate_cute_benchmark.py"
+            "Generate it with: python src/evaluation/datasets/scripts/generate_cute_benchmark.py"
         )
 
     # Available task types (derived from task naming in prompts)
     all_task_types = [
-        'spell', 'spell_inverse', 'contains_char', 'contains_word',
-        'orth', 'sem', 'ins_char', 'ins_word', 'del_char', 'del_word',
-        'sub_char', 'sub_word', 'swap_char', 'swap_char'
+        "spell",
+        "spell_inverse",
+        "contains_char",
+        "contains_word",
+        "orth",
+        "sem",
+        "ins_char",
+        "ins_word",
+        "del_char",
+        "del_word",
+        "sub_char",
+        "sub_word",
+        "swap_char",
+        "swap_char",
     ]
 
     if task_types is None:
@@ -61,7 +73,7 @@ def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
 
     # Load all samples from JSONL
     all_samples = []
-    with open(jsonl_path, 'r', encoding='utf-8') as f:
+    with open(jsonl_path, "r", encoding="utf-8") as f:
         for line in f:
             sample = json.loads(line.strip())
             all_samples.append(sample)
@@ -70,7 +82,7 @@ def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
     tasks = []
     task_counts = {}
     for sample in all_samples:
-        task_type = sample.get('task_type', 'unknown')
+        task_type = sample.get("task_type", "unknown")
         if task_types is None or task_type in task_types:
             if task_type not in task_counts:
                 task_counts[task_type] = 0
@@ -80,7 +92,7 @@ def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
     total = len(tasks)
     num_tasks = len(task_counts)
     print(f"CUTE (GEN): Loaded {total} character understanding tasks from local file ({num_tasks} task types).")
-    print(f"Note: CUTE is a generative benchmark (prompt → answer), not MCQ format.")
+    print("Note: CUTE is a generative benchmark (prompt → answer), not MCQ format.")
 
     # Shuffle tasks
     indices = list(range(len(tasks)))
@@ -88,8 +100,8 @@ def load_cute(split="test", task_types=None, max_per_task=100, **kwargs):
 
     for i in indices:
         task = tasks[i]
-        prefix = task['question']
-        ground_truth = task['answer']
+        prefix = task["question"]
+        ground_truth = task["answer"]
         false_options = []  # Generative task, no MCQ options
         sample_id = task.get("id", f"cute_gen_{i:05d}")
 

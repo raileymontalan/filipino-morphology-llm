@@ -1,8 +1,7 @@
 """Integration code"""
 
 import torch
-
-from models import embedding_models, generator, model_shell
+from models import generator, model_shell
 
 
 def batch(data, batch_size):
@@ -25,9 +24,7 @@ class EvalWrapper:
         results = []
         with torch.no_grad():
             with torch.autocast(device_type=device_str):
-                for prefix_batch, cont_batch in zip(
-                    batch(prefixes, 32), batch(continuations, 32)
-                ):
+                for prefix_batch, cont_batch in zip(batch(prefixes, 32), batch(continuations, 32)):
                     ll = self.model_shell.loglikelihood(prefix_batch, cont_batch)
                     results.extend(ll.cpu().numpy())
         return results

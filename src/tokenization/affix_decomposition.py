@@ -1,5 +1,5 @@
 """
-Affix Decomposition Algorithm (Option 3)
+Affix Decomposition Algorithm (Option 3).
 
 For tokenizers that don't have Filipino affixes in their vocabulary,
 this module finds optimal ways to represent affixes using existing tokens.
@@ -18,16 +18,17 @@ Example:
     We choose option 1 based on linguistic criteria.
 """
 
-import tiktoken
-from typing import Dict, List, Tuple, Optional, Set
-from dataclasses import dataclass
 import json
-from collections import defaultdict
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+import tiktoken
 
 
 @dataclass
 class AffixDecomposition:
     """A decomposition of an affix into sub-tokens."""
+
     affix: str  # Original affix (e.g., "ikina")
     tokens: List[str]  # Decomposition (e.g., ["i", "ki", "na"])
     token_ids: List[int]  # Token IDs in vocabulary
@@ -63,7 +64,19 @@ class AffixDecomposer:
         """Load affixes from file, removing prefix/suffix markers."""
         if affixes_file is None:
             # Use default common affixes
-            return ["um", "in", "mag", "nag", "pag", "ka", "ma", "pa", "an", "han", "nan"]
+            return [
+                "um",
+                "in",
+                "mag",
+                "nag",
+                "pag",
+                "ka",
+                "ma",
+                "pa",
+                "an",
+                "han",
+                "nan",
+            ]
 
         affixes = []
         with open(affixes_file) as f:
@@ -77,7 +90,7 @@ class AffixDecomposer:
 
     def is_in_vocabulary(self, affix: str) -> bool:
         """Check if affix exists as a token in vocabulary."""
-        token_bytes = affix.encode('utf-8')
+        token_bytes = affix.encode("utf-8")
         return token_bytes in self.vocab_tokens
 
     def find_all_decompositions(self, affix: str, max_tokens: int = 5) -> List[AffixDecomposition]:
@@ -93,15 +106,17 @@ class AffixDecomposer:
         """
         # Check for exact match first
         if self.is_in_vocabulary(affix):
-            token_bytes = affix.encode('utf-8')
+            token_bytes = affix.encode("utf-8")
             token_id = self.vocab[token_bytes]
-            return [AffixDecomposition(
-                affix=affix,
-                tokens=[affix],
-                token_ids=[token_id],
-                score=10.0,  # Perfect score for exact match
-                decomposition_type="exact_match"
-            )]
+            return [
+                AffixDecomposition(
+                    affix=affix,
+                    tokens=[affix],
+                    token_ids=[token_id],
+                    score=10.0,  # Perfect score for exact match
+                    decomposition_type="exact_match",
+                )
+            ]
 
         # Find all possible decompositions via BPE
         decompositions = []
@@ -111,15 +126,17 @@ class AffixDecomposer:
             splits = self._generate_splits(affix, n_tokens)
             for split in splits:
                 if self._all_in_vocabulary(split):
-                    token_ids = [self.vocab[s.encode('utf-8')] for s in split]
+                    token_ids = [self.vocab[s.encode("utf-8")] for s in split]
                     score = self._score_decomposition(affix, split)
-                    decompositions.append(AffixDecomposition(
-                        affix=affix,
-                        tokens=split,
-                        token_ids=token_ids,
-                        score=score,
-                        decomposition_type="optimal"
-                    ))
+                    decompositions.append(
+                        AffixDecomposition(
+                            affix=affix,
+                            tokens=split,
+                            token_ids=token_ids,
+                            score=score,
+                            decomposition_type="optimal",
+                        )
+                    )
 
         # Sort by score
         decompositions.sort(key=lambda d: d.score, reverse=True)
@@ -153,7 +170,7 @@ class AffixDecomposer:
 
     def _all_in_vocabulary(self, tokens: List[str]) -> bool:
         """Check if all tokens exist in vocabulary."""
-        return all(t.encode('utf-8') in self.vocab_tokens for t in tokens)
+        return all(t.encode("utf-8") in self.vocab_tokens for t in tokens)
 
     def _score_decomposition(self, affix: str, tokens: List[str]) -> float:
         """
@@ -206,7 +223,18 @@ class AffixDecomposer:
 
         # Criterion 5: Bonus for linguistically meaningful splits
         # Common morpheme patterns in Filipino
-        meaningful_units = {"um", "in", "an", "ka", "ma", "pa", "na", "mag", "nag", "pag"}
+        meaningful_units = {
+            "um",
+            "in",
+            "an",
+            "ka",
+            "ma",
+            "pa",
+            "na",
+            "mag",
+            "nag",
+            "pag",
+        }
         for token in tokens:
             if token.lower() in meaningful_units:
                 score += 1.5
@@ -223,7 +251,7 @@ class AffixDecomposer:
         token_ids = []
 
         for char in affix:
-            char_bytes = char.encode('utf-8')
+            char_bytes = char.encode("utf-8")
             if char_bytes in self.vocab_tokens:
                 tokens.append(char)
                 token_ids.append(self.vocab[char_bytes])
@@ -239,7 +267,7 @@ class AffixDecomposer:
             tokens=tokens,
             token_ids=token_ids,
             score=0.5,  # Low score for character-level fallback
-            decomposition_type="fallback"
+            decomposition_type="fallback",
         )
 
     def get_best_decomposition(self, affix: str, use_cache: bool = True) -> Optional[AffixDecomposition]:
@@ -377,47 +405,47 @@ class AffixDecomposer:
         report.append("")
 
         # Affixes in vocabulary
-        if analysis['in_vocab_list']:
+        if analysis["in_vocab_list"]:
             report.append("Affixes in Vocabulary (can use directly):")
             report.append("-" * 70)
-            for affix in sorted(analysis['in_vocab_list'])[:20]:  # Show first 20
+            for affix in sorted(analysis["in_vocab_list"])[:20]:  # Show first 20
                 report.append(f"  ✓ {affix}")
-            if len(analysis['in_vocab_list']) > 20:
+            if len(analysis["in_vocab_list"]) > 20:
                 report.append(f"  ... and {len(analysis['in_vocab_list']) - 20} more")
             report.append("")
 
         # Decompositions needed
-        if analysis['decomposition_list']:
+        if analysis["decomposition_list"]:
             report.append("Affixes Needing Decomposition:")
             report.append("-" * 70)
-            for affix, decomp in sorted(analysis['decomposition_list'], key=lambda x: x[1].score, reverse=True)[:15]:
+            for affix, decomp in sorted(analysis["decomposition_list"], key=lambda x: x[1].score, reverse=True)[:15]:
                 report.append(f"  {decomp}")
-            if len(analysis['decomposition_list']) > 15:
+            if len(analysis["decomposition_list"]) > 15:
                 report.append(f"  ... and {len(analysis['decomposition_list']) - 15} more")
             report.append("")
 
         # Cannot decompose
-        if analysis['cannot_decompose_list']:
+        if analysis["cannot_decompose_list"]:
             report.append("⚠ Affixes That Cannot Be Decomposed:")
             report.append("-" * 70)
-            for affix in analysis['cannot_decompose_list']:
+            for affix in analysis["cannot_decompose_list"]:
                 report.append(f"  ✗ {affix}")
             report.append("")
 
         # Recommendations
         report.append("Recommendations:")
         report.append("-" * 70)
-        if analysis['coverage_rate'] < 0.3:
+        if analysis["coverage_rate"] < 0.3:
             report.append("  ⚠ Low coverage (<30%) - consider training custom tokenizer")
-        elif analysis['coverage_rate'] < 0.6:
+        elif analysis["coverage_rate"] < 0.6:
             report.append("  → Moderate coverage - Option 3 (decomposition) recommended")
         else:
             report.append("  ✓ Good coverage (>60%) - can work with existing vocabulary")
 
-        if analysis['need_decomposition'] > 0:
+        if analysis["need_decomposition"] > 0:
             report.append(f"  → Use decomposition table for {analysis['need_decomposition']} affixes")
 
-        if analysis['cannot_decompose'] > 0:
+        if analysis["cannot_decompose"] > 0:
             report.append(f"  ⚠ {analysis['cannot_decompose']} affixes cannot be represented")
             report.append("     Consider adding to vocabulary (Option 2)")
 
@@ -445,13 +473,15 @@ def compare_tokenizers(tokenizer_names: List[str], affixes_file: str):
         decomposer = AffixDecomposer(tokenizer_name, affixes_file)
         analysis = decomposer.analyze_vocabulary_coverage()
 
-        results.append({
-            "tokenizer": tokenizer_name,
-            "total_affixes": analysis["total_affixes"],
-            "in_vocabulary": analysis["in_vocabulary"],
-            "coverage_rate": analysis["coverage_rate"],
-            "need_decomposition": analysis["need_decomposition"],
-            "cannot_decompose": analysis["cannot_decompose"],
-        })
+        results.append(
+            {
+                "tokenizer": tokenizer_name,
+                "total_affixes": analysis["total_affixes"],
+                "in_vocabulary": analysis["in_vocabulary"],
+                "coverage_rate": analysis["coverage_rate"],
+                "need_decomposition": analysis["need_decomposition"],
+                "cannot_decompose": analysis["cannot_decompose"],
+            }
+        )
 
     return pd.DataFrame(results)

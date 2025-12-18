@@ -72,4 +72,4 @@ general:
     data_dir: data
     checkpoint_dir: checkpoints
   seed: 0
-  device: cuda  
+  device: cuda

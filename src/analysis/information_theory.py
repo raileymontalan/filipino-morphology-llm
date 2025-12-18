@@ -1,5 +1,5 @@
 """
-Information-Theoretic Analysis of Tokenizations
+Information-Theoretic Analysis of Tokenizations.
 
 Quantifies morphological information using information theory metrics:
 1. Morpheme-Token Mutual Information: How much does tokenization tell us about morphology?
@@ -9,16 +9,18 @@ Quantifies morphological information using information theory metrics:
 These metrics provide theoretical grounding for why affix-aware tokenization helps.
 """
 
-import numpy as np
-from typing import List, Dict, Tuple, Optional
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
 import pandas as pd
 
 
 @dataclass
 class MorphemeTokenAlignment:
     """Alignment between morphemes and tokens for a word."""
+
     word: str
     morphemes: List[str]
     tokens: List[str]
@@ -38,10 +40,7 @@ class InformationTheoreticAnalysis:
         """
         self.tokenizer = tokenizer
 
-    def compute_morpheme_token_mutual_information(
-        self,
-        alignments: List[MorphemeTokenAlignment]
-    ) -> float:
+    def compute_morpheme_token_mutual_information(self, alignments: List[MorphemeTokenAlignment]) -> float:
         """
         Compute mutual information between morpheme and token boundaries.
 
@@ -58,14 +57,14 @@ class InformationTheoreticAnalysis:
         # Compute H(M): entropy of morpheme boundaries
         h_morphemes = self._compute_boundary_entropy(
             [a.morpheme_boundaries for a in alignments],
-            [len(a.word) for a in alignments]
+            [len(a.word) for a in alignments],
         )
 
         # Compute H(M|T): conditional entropy of morpheme boundaries given token boundaries
         h_morphemes_given_tokens = self._compute_conditional_boundary_entropy(
             [a.morpheme_boundaries for a in alignments],
             [a.token_boundaries for a in alignments],
-            [len(a.word) for a in alignments]
+            [len(a.word) for a in alignments],
         )
 
         # MI = H(M) - H(M|T)
@@ -74,10 +73,7 @@ class InformationTheoreticAnalysis:
         return mutual_information
 
     def compute_morphological_perplexity(
-        self,
-        model,
-        words_by_complexity: Dict[str, List[str]],
-        context_fn=None
+        self, model, words_by_complexity: Dict[str, List[str]], context_fn=None
     ) -> Dict[str, float]:
         """
         Compute perplexity on words of different morphological complexity.
@@ -112,13 +108,12 @@ class InformationTheoreticAnalysis:
                 perplexity = np.exp(-mean_log_prob)
                 perplexities[complexity] = perplexity
             else:
-                perplexities[complexity] = float('inf')
+                perplexities[complexity] = float("in")
 
         return perplexities
 
     def compute_affix_consistency_information(
-        self,
-        words_with_affixes: List[Tuple[str, List[str]]]
+        self, words_with_affixes: List[Tuple[str, List[str]]]
     ) -> Dict[str, float]:
         """
         Measure information content in affix tokenizations.
@@ -155,10 +150,7 @@ class InformationTheoreticAnalysis:
 
         return entropies
 
-    def compute_morphological_information_content(
-        self,
-        alignments: List[MorphemeTokenAlignment]
-    ) -> Dict[str, float]:
+    def compute_morphological_information_content(self, alignments: List[MorphemeTokenAlignment]) -> Dict[str, float]:
         """
         Compute information content at different levels.
 
@@ -222,7 +214,7 @@ class InformationTheoreticAnalysis:
         alignments1: List[MorphemeTokenAlignment],
         alignments2: List[MorphemeTokenAlignment],
         tokenizer1_name: str = "Tokenizer 1",
-        tokenizer2_name: str = "Tokenizer 2"
+        tokenizer2_name: str = "Tokenizer 2",
     ) -> pd.DataFrame:
         """
         Compare information-theoretic properties of two tokenizations.
@@ -244,20 +236,22 @@ class InformationTheoreticAnalysis:
         info1 = analyzer1.compute_morphological_information_content(alignments1)
         info2 = analyzer2.compute_morphological_information_content(alignments2)
 
-        comparison = pd.DataFrame([
-            {
-                "tokenizer": tokenizer1_name,
-                "mutual_information": mi1,
-                "token_entropy": info1["token_entropy"],
-                "morpheme_given_token_entropy": info1["morpheme_given_token_entropy"],
-            },
-            {
-                "tokenizer": tokenizer2_name,
-                "mutual_information": mi2,
-                "token_entropy": info2["token_entropy"],
-                "morpheme_given_token_entropy": info2["morpheme_given_token_entropy"],
-            }
-        ])
+        comparison = pd.DataFrame(
+            [
+                {
+                    "tokenizer": tokenizer1_name,
+                    "mutual_information": mi1,
+                    "token_entropy": info1["token_entropy"],
+                    "morpheme_given_token_entropy": info1["morpheme_given_token_entropy"],
+                },
+                {
+                    "tokenizer": tokenizer2_name,
+                    "mutual_information": mi2,
+                    "token_entropy": info2["token_entropy"],
+                    "morpheme_given_token_entropy": info2["morpheme_given_token_entropy"],
+                },
+            ]
+        )
 
         return comparison
 
@@ -267,7 +261,7 @@ class InformationTheoreticAnalysis:
 
     def _compute_entropy(self, items: List[str]) -> float:
         """
-        Compute Shannon entropy: H(X) = -sum(p(x) * log2(p(x)))
+        Compute Shannon entropy: H(X) = -sum(p(x) * log2(p(x))).
 
         Args:
             items: List of items (tokens, morphemes, etc.)
@@ -289,11 +283,7 @@ class InformationTheoreticAnalysis:
 
         return entropy
 
-    def _compute_boundary_entropy(
-        self,
-        boundary_lists: List[List[int]],
-        word_lengths: List[int]
-    ) -> float:
+    def _compute_boundary_entropy(self, boundary_lists: List[List[int]], word_lengths: List[int]) -> float:
         """
         Compute entropy of boundary positions.
 
@@ -321,7 +311,7 @@ class InformationTheoreticAnalysis:
         self,
         morpheme_boundaries_list: List[List[int]],
         token_boundaries_list: List[List[int]],
-        word_lengths: List[int]
+        word_lengths: List[int],
     ) -> float:
         """
         Compute H(Morpheme Boundaries | Token Boundaries).
@@ -366,9 +356,9 @@ class InformationTheoreticAnalysis:
         for token_id in token_ids:
             token_bytes = self.tokenizer.decode_single_token_bytes(token_id)
             try:
-                tokens.append(token_bytes.decode('utf-8'))
-            except:
-                tokens.append(token_bytes.decode('utf-8', errors='replace'))
+                tokens.append(token_bytes.decode("utf-8"))
+            except Exception:
+                tokens.append(token_bytes.decode("utf-8", errors="replace"))
 
         return tokens
 
@@ -395,12 +385,7 @@ class InformationTheoreticAnalysis:
 
         return affix_tokens if affix_tokens else None
 
-    def _tokens_overlap_morpheme(
-        self,
-        alignment: MorphemeTokenAlignment,
-        morpheme: str,
-        token: str
-    ) -> bool:
+    def _tokens_overlap_morpheme(self, alignment: MorphemeTokenAlignment, morpheme: str, token: str) -> bool:
         """Check if a token overlaps with a morpheme in the word."""
         # Find morpheme position
         word = alignment.word
@@ -420,9 +405,7 @@ class InformationTheoreticAnalysis:
 
 
 def generate_information_theoretic_report(
-    tokenizer,
-    alignments: List[MorphemeTokenAlignment],
-    tokenizer_name: str = "Unknown"
+    tokenizer, alignments: List[MorphemeTokenAlignment], tokenizer_name: str = "Unknown"
 ) -> str:
     """Generate a human-readable information-theoretic report."""
     analyzer = InformationTheoreticAnalysis(tokenizer)
@@ -459,7 +442,7 @@ def generate_information_theoretic_report(
     report.append("Interpretation:")
     report.append("-" * 70)
     report.append(f"  Knowing tokens reduces morpheme uncertainty by {mi:.3f} bits")
-    reduction_pct = (mi / info_content['morpheme_entropy'] * 100) if info_content['morpheme_entropy'] > 0 else 0
+    reduction_pct = (mi / info_content["morpheme_entropy"] * 100) if info_content["morpheme_entropy"] > 0 else 0
     report.append(f"  ({reduction_pct:.1f}% of morpheme entropy)")
     report.append("")
 

@@ -4,7 +4,6 @@ A collection of FFN blocks
 
 import torch
 import torch.nn.functional as F
-
 from models.components.layers.activations import build_activation
 
 
@@ -84,7 +83,5 @@ FFN_DICT = {
 
 
 def build_ffn(hidden_dim, ffn_cfg):
-    """
-    Build a feedforward network
-    """
+    """Build a feedforward network."""
     return FFN_DICT[ffn_cfg["ffn_type"]](hidden_dim=hidden_dim, ffn_cfg=ffn_cfg)

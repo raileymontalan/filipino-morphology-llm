@@ -9,20 +9,20 @@ Shows how to:
 4. Compare multiple models
 """
 
-import sys
+import json
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+import sys
+from pathlib import Path
 
 import pandas as pd
-import json
-from pathlib import Path
 
 from evaluation.datasets.generators.hierarchical import HierarchicalTaskGenerator
 from evaluation.evaluators.hierarchical import (
     HierarchicalAnalyzer,
     compare_multiple_models,
-    visualize_capability_profile,
 )
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 def demo_generate_tasks():
@@ -122,16 +122,31 @@ def demo_analyze_results():
     models = {
         "baseline": {
             # Baseline: Performance degrades steadily
-            0: 0.95, 1: 0.75, 2: 0.55, 3: 0.40, 4: 0.35, 5: 0.25
+            0: 0.95,
+            1: 0.75,
+            2: 0.55,
+            3: 0.40,
+            4: 0.35,
+            5: 0.25,
         },
         "stochastok": {
             # StochasTok: Slight improvement, especially at lower levels
-            0: 0.95, 1: 0.80, 2: 0.60, 3: 0.50, 4: 0.45, 5: 0.35
+            0: 0.95,
+            1: 0.80,
+            2: 0.60,
+            3: 0.50,
+            4: 0.45,
+            5: 0.35,
         },
         "patok": {
             # Patok: Major improvement at morphological levels (2-4)
-            0: 0.95, 1: 0.80, 2: 0.78, 3: 0.70, 4: 0.68, 5: 0.50
-        }
+            0: 0.95,
+            1: 0.80,
+            2: 0.78,
+            3: 0.70,
+            4: 0.68,
+            5: 0.50,
+        },
     }
 
     # Generate synthetic results for each model
@@ -150,7 +165,7 @@ def demo_analyze_results():
                         "correct": correct,
                         "predicted_answer": "pred",
                         "gold_answer": "gold",
-                        "word": f"word_{i}"
+                        "word": f"word_{i}",
                     }
                     f.write(json.dumps(result) + "\n")
 
@@ -193,7 +208,8 @@ def demo_analyze_results():
     print("-" * 60)
     for _, row in patok_vs_baseline.iterrows():
         if row["difference"] > 0.05:
-            print(f"Level {int(row['level'])}: +{row['difference']:.1%} (Patok {row['model1_accuracy']:.1%} vs Baseline {row['model2_accuracy']:.1%})")
+            print(f"Level {int(row['level'])}: +{row['difference']:.1%}")
+            print(f"(Patok {row['model1_acc']:.1%} vs Baseline {row['model2_acc']:.1%})")
 
     print()
 
@@ -301,6 +317,7 @@ def main():
     except Exception as e:
         print(f"\nError during demo: {e}")
         import traceback
+
         traceback.print_exc()
 
 

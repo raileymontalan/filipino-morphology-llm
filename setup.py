@@ -1,4 +1,10 @@
-from setuptools import setup, find_packages
+"""
+Setup script for the filipino-morphology-llm package.
+
+This script configures the package installation, dependencies, and entry points.
+"""
+
+from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()

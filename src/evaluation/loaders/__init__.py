@@ -1,9 +1,6 @@
-"""
-Benchmark loaders for loading evaluation datasets.
-"""
+"""Benchmark loaders for loading evaluation datasets."""
 
-from .pacute import load_pacute
-from .registry import load_benchmark, EVALS_DICT
+from .registry import EVALS_DICT, load_benchmark
 
 __all__ = [
     "load_pacute",

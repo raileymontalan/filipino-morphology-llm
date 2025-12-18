@@ -3,7 +3,6 @@ Simple, flexible core models.
 """
 
 import torch
-
 from models.components.layers.transformer_blocks import GenericTransformerBlock
 
 
@@ -52,4 +51,3 @@ class GenericTransformer(torch.nn.Module):
             x = block(x, attention_mask=attention_mask)
 
         return x
-

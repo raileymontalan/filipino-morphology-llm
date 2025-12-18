@@ -8,22 +8,21 @@ NOTE: This evaluator is for the stochastok training pipeline and requires
 import torch
 import tqdm
 
+# Use the new evaluation modules instead:
+from evaluation.loaders import load_benchmark
+from evaluation.metrics import MCQ_METRIC_DICT
+
 # Legacy imports - these require the stochastok training environment
 # from evals import eval_wrapper
 # from evals.evaluator_interface import EvaluationInterface
 # from evals.mcqs.load_benchmarks import load_benchmark
 # from evals.metrics import MCQ_METRIC_DICT
 
-# Use the new evaluation modules instead:
-from evaluation.loaders import load_benchmark
-from evaluation.metrics import MCQ_METRIC_DICT
-
 
 class MCQEvaluator:
     """
-    Base Evaluator class the evaluates models
-    and prints/logs the results.
-    
+    Base Evaluator class the evaluates models and prints/logs the results.
+
     NOTE: This evaluator requires a model with specific interface (eval_wrapper)
           from the stochastok training pipeline.
     """
@@ -32,6 +31,7 @@ class MCQEvaluator:
         self.model = model
         # Import the wrapper (previously eval_wrapper.py, now wrapper.py)
         from evaluation.evaluators.wrapper import EvalWrapper
+
         self.wrapper = EvalWrapper(model)
         self.num_samples = num_samples
         self.benchmarks = benchmarks
@@ -41,8 +41,9 @@ class MCQEvaluator:
     @torch.no_grad()
     def predict(self, prefix, ground_truth, false_options):
         """
-        Given a prompt, use the model to predict the output
-        Returns the loglikelihood of the ground truth and the options
+        Given a prompt, use the model to predict the output.
+
+        Returns the loglikelihood of the ground truth and the options.
         """
         prefixes = [prefix] * (len(false_options) + 1)
         continuations = [ground_truth] + false_options
@@ -51,9 +52,7 @@ class MCQEvaluator:
         return loglikelihoods
 
     def _calculate_metrics(self, confidences):
-        """
-        Calculate the metrics for the model
-        """
+        """Calculate the metrics for the model."""
         score_dict = {}
 
         for metric_name, metric in MCQ_METRIC_DICT.items():
@@ -62,13 +61,11 @@ class MCQEvaluator:
         return score_dict
 
     def evaluate_benchmark(self, benchmark_name, num_samples=None):
-        """Evaluate model performance on a specific benchmark"""
+        """Evaluate model performance on a specific benchmark."""
         # load the benchmark_loader
         benchmark_loader = load_benchmark(benchmark_name)
         confidences = []
-        for i, (prefix, ground_truth, false_options) in tqdm.tqdm(
-            enumerate(benchmark_loader)
-        ):
+        for i, (prefix, ground_truth, false_options) in tqdm.tqdm(enumerate(benchmark_loader)):
             if num_samples is not None and i > num_samples:
                 break
             loglikelihoods = self.predict(prefix, ground_truth, false_options)
@@ -76,30 +73,27 @@ class MCQEvaluator:
         # find the maximum dimension and pad the confidences up to that dimension
         max_length = max([len(confidence) for confidence in confidences])
         for i, confidence in enumerate(confidences):
-            confidences[i] = torch.nn.functional.pad(
-                confidence, (0, max_length - len(confidence)), value=-1e10
-            )
+            confidences[i] = torch.nn.functional.pad(confidence, (0, max_length - len(confidence)), value=-1e10)
 
         score_dict = self._calculate_metrics(torch.stack(confidences))
 
         return score_dict
 
     def evaluate(self):
-        """Given a list of benchmark names, load and evaluate them
+        """
+        Given a list of benchmark names, load and evaluate them.
 
-        Only do so on  {num_samples} for each benchmark"""
+        Only do so on  {num_samples} for each benchmark."""
         results = {}
         for benchmark_name in self.benchmarks:
             print(f"evalling benchmark {benchmark_name}")
-            score_dict = self.evaluate_benchmark(
-                benchmark_name=benchmark_name, num_samples=self.num_samples
-            )
+            score_dict = self.evaluate_benchmark(benchmark_name=benchmark_name, num_samples=self.num_samples)
             results[benchmark_name] = score_dict
 
         return results
 
     def _pretty_print_results(self, results):
-        """Pretty print the results"""
+        """Pretty print the results."""
         for benchmark_name, score_dict in results.items():
             print(f"{benchmark_name}:")
             for metric_name, score in score_dict.items():

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Preprocess JSONL data to Megatron binary format (.bin + .idx) for NeMo training.
 
 NeMo's PreTrainingDataModule expects Megatron binary format, not raw JSONL.
@@ -47,7 +47,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Preprocess JSONL to Megatron binary format with optional stochastok expansion"
     )
-    
+
     parser.add_argument(
         "--input",
         type=str,
@@ -139,20 +139,20 @@ def parse_args():
         default=42,
         help="Random seed for reproducible tokenization (default: 42)",
     )
-    
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    
+
     input_path = Path(args.input)
-    
+
     # Verify input exists
     if not input_path.exists():
         print(f"✗ Error: Input file not found: {input_path}")
         sys.exit(1)
-    
+
     print("=" * 80)
     print("Megatron Binary Format Preprocessing")
     print("=" * 80)
@@ -193,63 +193,69 @@ def preprocess_vanilla(args, input_path):
     """Standard Megatron preprocessing without token expansion."""
     # Use Megatron-LM preprocessing tool (included in NeMo container)
     print("Locating Megatron preprocessing tools...")
-    
+
     # The official Megatron-LM preprocessing script
     preprocess_script = "/opt/megatron-lm/tools/preprocess_data.py"
-    
+
     if not Path(preprocess_script).exists():
         print(f"✗ Error: Megatron preprocessing script not found: {preprocess_script}")
         print()
         print("This script must run inside the NeMo container!")
         print("The PBS job should handle this automatically.")
         sys.exit(1)
-    
+
     print(f"✓ Found preprocessing script: {preprocess_script}")
     print()
-    
+
     # Build the preprocessing command for Megatron-LM
     # Use SentencePieceTokenizer with local tokenizer.model file
     cmd = [
         "python",
         preprocess_script,
-        "--input", str(input_path),
-        "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "SentencePieceTokenizer",
-        "--tokenizer-model", args.tokenizer_model,
-        "--json-keys", args.text_key,
-        "--workers", str(args.workers),
+        "--input",
+        str(input_path),
+        "--output-prefix",
+        args.output_prefix,
+        "--tokenizer-type",
+        "SentencePieceTokenizer",
+        "--tokenizer-model",
+        args.tokenizer_model,
+        "--json-keys",
+        args.text_key,
+        "--workers",
+        str(args.workers),
         "--append-eod",  # Add end-of-document token
     ]
-    
+
     print("Running preprocessing command:")
     print(" ".join(cmd))
     print()
-    
+
     # Run the command
     try:
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             check=True,
             capture_output=False,  # Show output in real-time
         )
-        
+
         # Verify output files were created (Megatron adds _text_document suffix)
         bin_file_megatron = Path(f"{args.output_prefix}_text_document.bin")
         idx_file_megatron = Path(f"{args.output_prefix}_text_document.idx")
-        
+
         if bin_file_megatron.exists() and idx_file_megatron.exists():
             # Rename files to remove _text_document suffix for simpler usage
             bin_file = Path(f"{args.output_prefix}.bin")
             idx_file = Path(f"{args.output_prefix}.idx")
-            
+
             print()
             print("=" * 80)
             print("✓ Preprocessing Complete!")
             print("=" * 80)
-            print(f"Renaming output files (removing _text_document suffix)...")
+            print("Renaming output files (removing _text_document suffix)...")
             bin_file_megatron.rename(bin_file)
             idx_file_megatron.rename(idx_file)
-            
+
             print(f"Binary file: {bin_file} ({bin_file.stat().st_size / 1e9:.2f} GB)")
             print(f"Index file:  {idx_file} ({idx_file.stat().st_size / 1e6:.2f} MB)")
             print()
@@ -260,7 +266,7 @@ def preprocess_vanilla(args, input_path):
         else:
             print("✗ Error: Output files not created")
             return 1
-            
+
     except subprocess.CalledProcessError as e:
         print(f"✗ Preprocessing failed with exit code {e.returncode}")
         return e.returncode
@@ -269,24 +275,26 @@ def preprocess_vanilla(args, input_path):
 def preprocess_stochastok(args, input_path):
     """
     Preprocess with stochastok token expansion.
-    
+
     This involves:
     1. Tokenizing text with standard tokenizer
     2. Applying stochastok expansion to token sequences
     3. Writing expanded sequences to Megatron binary format
     """
     import json
-    import numpy as np
     import random
+
+    import numpy as np
     from tqdm import tqdm
-    
+
     # Set random seed for reproducibility
     random.seed(args.seed)
     np.random.seed(args.seed)
-    
+
     print("Loading tokenizer...")
     try:
         from transformers import AutoTokenizer
+
         tokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
         print(f"✓ Loaded tokenizer: {args.hf_tokenizer}")
         print(f"  Vocab size: {tokenizer.vocab_size}")
@@ -296,20 +304,20 @@ def preprocess_stochastok(args, input_path):
 
     print()
     print("Initializing StochastokProcessor...")
-    
+
     # Import StochastokProcessor
     try:
-        import sys
         import subprocess
+        import sys
 
         # Install dependencies if needed
         missing_deps = []
         try:
-            import ahocorasick
+            pass
         except ImportError:
             missing_deps.append("pyahocorasick")
         try:
-            import tiktoken
+            pass
         except ImportError:
             missing_deps.append("tiktoken")
         if missing_deps:
@@ -332,87 +340,90 @@ def preprocess_stochastok(args, input_path):
         print()
         print("Make sure StochastokProcessor is available in src/tokenization/")
         return 1
-    
+
     print()
     print("Creating intermediate JSONL with expanded tokens...")
-    
+
     # Create temporary file for expanded tokens
     temp_dir = Path(args.output_prefix).parent
     temp_dir.mkdir(parents=True, exist_ok=True)
     temp_jsonl = temp_dir / f"{Path(args.output_prefix).name}_stochastok_temp.jsonl"
-    
+
     try:
-        with open(input_path, 'r', encoding='utf-8') as infile, \
-             open(temp_jsonl, 'w', encoding='utf-8') as outfile:
-            
-            total_lines = sum(1 for _ in open(input_path, 'r', encoding='utf-8'))
-            
+        with (
+            open(input_path, "r", encoding="utf-8") as infile,
+            open(temp_jsonl, "w", encoding="utf-8") as outfile,
+        ):
+            total_lines = sum(1 for _ in open(input_path, "r", encoding="utf-8"))
+
             total_original_tokens = 0
             total_expanded_tokens = 0
-            
+
             for line in tqdm(infile, total=total_lines, desc="Processing documents"):
                 try:
                     doc = json.loads(line)
                     text = doc.get(args.text_key, "")
-                    
+
                     if not text:
                         continue
-                    
+
                     # Tokenize
                     token_ids = tokenizer.encode(text, add_special_tokens=False)
                     original_length = len(token_ids)
-                    
+
                     # Apply stochastok expansion
-                    expanded_ids = processor.expand(
-                        token_ids,
-                        expand_prop=args.expand_prop,
-                        disable_tqdm=True
-                    )
-                    
+                    expanded_ids = processor.expand(token_ids, expand_prop=args.expand_prop, disable_tqdm=True)
+
                     total_original_tokens += original_length
                     total_expanded_tokens += len(expanded_ids)
-                    
+
                     # Decode back to text for Megatron preprocessing
                     # Note: This may introduce some artifacts, but Megatron will re-tokenize
                     expanded_text = tokenizer.decode(expanded_ids, skip_special_tokens=True)
-                    
+
                     # Write to temp file
                     output_doc = {args.text_key: expanded_text}
-                    outfile.write(json.dumps(output_doc, ensure_ascii=False) + '\n')
-                    
+                    outfile.write(json.dumps(output_doc, ensure_ascii=False) + "\n")
+
                 except Exception as e:
                     print(f"Warning: Error processing line: {e}")
                     continue
-        
+
         print()
         print(f"✓ Created temporary expanded JSONL: {temp_jsonl}")
         print(f"  Original tokens:  {total_original_tokens:,}")
         print(f"  Expanded tokens:  {total_expanded_tokens:,}")
         print(f"  Expansion ratio:  {total_expanded_tokens / total_original_tokens:.2%}")
-        
+
     except Exception as e:
         print(f"✗ Error during token expansion: {e}")
         return 1
-    
+
     print()
     print("Running Megatron preprocessing on expanded data...")
-    
+
     # Now run standard Megatron preprocessing on the expanded data
     preprocess_script = "/opt/megatron-lm/tools/preprocess_data.py"
-    
+
     if not Path(preprocess_script).exists():
         print(f"✗ Error: Megatron preprocessing script not found: {preprocess_script}")
         return 1
-    
+
     cmd = [
         "python",
         preprocess_script,
-        "--input", str(temp_jsonl),
-        "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "SentencePieceTokenizer",
-        "--tokenizer-model", args.tokenizer_model,
-        "--json-keys", args.text_key,
-        "--workers", str(args.workers),
+        "--input",
+        str(temp_jsonl),
+        "--output-prefix",
+        args.output_prefix,
+        "--tokenizer-type",
+        "SentencePieceTokenizer",
+        "--tokenizer-model",
+        args.tokenizer_model,
+        "--json-keys",
+        args.text_key,
+        "--workers",
+        str(args.workers),
         "--append-eod",
     ]
 
@@ -421,7 +432,7 @@ def preprocess_stochastok(args, input_path):
     print()
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             check=True,
             capture_output=False,
@@ -440,7 +451,7 @@ def preprocess_stochastok(args, input_path):
             print("=" * 80)
             print("✓ Stochastok Preprocessing Complete!")
             print("=" * 80)
-            print(f"Renaming output files (removing _text_document suffix)...")
+            print("Renaming output files (removing _text_document suffix)...")
             bin_file_megatron.rename(bin_file)
             idx_file_megatron.rename(idx_file)
 
@@ -451,7 +462,7 @@ def preprocess_stochastok(args, input_path):
             print(f"Binary file: {bin_file} ({bin_file.stat().st_size / 1e9:.2f} GB)")
             print(f"Index file:  {idx_file} ({idx_file.stat().st_size / 1e6:.2f} MB)")
             print()
-            print(f"Expansion statistics:")
+            print("Expansion statistics:")
             print(f"  Original tokens:  {total_original_tokens:,}")
             print(f"  Expanded tokens:  {total_expanded_tokens:,}")
             print(f"  Expansion ratio:  {total_expanded_tokens / total_original_tokens:.2%}")
@@ -485,8 +496,9 @@ def preprocess_patok(args, input_path):
     3. Writing processed sequences to Megatron binary format
     """
     import json
-    import numpy as np
     import random
+
+    import numpy as np
     from tqdm import tqdm
 
     # Set random seed for reproducibility
@@ -496,6 +508,7 @@ def preprocess_patok(args, input_path):
     print("Loading tokenizer...")
     try:
         from transformers import AutoTokenizer
+
         tokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
         print(f"✓ Loaded tokenizer: {args.hf_tokenizer}")
         print(f"  Vocab size: {tokenizer.vocab_size}")
@@ -509,6 +522,7 @@ def preprocess_patok(args, input_path):
     # Import MorphologyAwarePatokProcessor
     try:
         import sys
+
         # Add src to path for proper imports
         # Try workspace path first (container), fall back to relative path
         workspace_src = Path("/workspace/src")
@@ -533,7 +547,7 @@ def preprocess_patok(args, input_path):
             affix_awareness=args.affix_awareness,
             expansions_file=args.expansions_file,
         )
-        print(f"✓ MorphologyAwarePatokProcessor initialized")
+        print("✓ MorphologyAwarePatokProcessor initialized")
         print(f"  Number of affix versions: {len(processor.affixes)}")
         print(f"  Number of affix token IDs: {len(processor.affix_ids)}")
         print(f"  Number of expandable tokens: {len(processor.expansions)}")
@@ -543,6 +557,7 @@ def preprocess_patok(args, input_path):
         print("Make sure MorphologyAwarePatokProcessor is available in /workspace/src/tokenization/")
         print("And that affix files exist at the specified paths.")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -555,10 +570,11 @@ def preprocess_patok(args, input_path):
     temp_jsonl = temp_dir / f"{Path(args.output_prefix).name}_patok_temp.jsonl"
 
     try:
-        with open(input_path, 'r', encoding='utf-8') as infile, \
-             open(temp_jsonl, 'w', encoding='utf-8') as outfile:
-
-            total_lines = sum(1 for _ in open(input_path, 'r', encoding='utf-8'))
+        with (
+            open(input_path, "r", encoding="utf-8") as infile,
+            open(temp_jsonl, "w", encoding="utf-8") as outfile,
+        ):
+            total_lines = sum(1 for _ in open(input_path, "r", encoding="utf-8"))
 
             total_original_tokens = 0
             total_processed_tokens = 0
@@ -580,7 +596,7 @@ def preprocess_patok(args, input_path):
                         token_ids,
                         contract_prop=args.contract_prop,
                         expand_prop=args.expand_prop,
-                        disable_tqdm=True
+                        disable_tqdm=True,
                     )
 
                     total_original_tokens += original_length
@@ -591,7 +607,7 @@ def preprocess_patok(args, input_path):
 
                     # Write to temp file
                     output_doc = {args.text_key: processed_text}
-                    outfile.write(json.dumps(output_doc, ensure_ascii=False) + '\n')
+                    outfile.write(json.dumps(output_doc, ensure_ascii=False) + "\n")
 
                 except Exception as e:
                     print(f"Warning: Error processing line: {e}")
@@ -608,6 +624,7 @@ def preprocess_patok(args, input_path):
     except Exception as e:
         print(f"✗ Error during Patok processing: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -624,12 +641,18 @@ def preprocess_patok(args, input_path):
     cmd = [
         "python",
         preprocess_script,
-        "--input", str(temp_jsonl),
-        "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "SentencePieceTokenizer",
-        "--tokenizer-model", args.tokenizer_model,
-        "--json-keys", args.text_key,
-        "--workers", str(args.workers),
+        "--input",
+        str(temp_jsonl),
+        "--output-prefix",
+        args.output_prefix,
+        "--tokenizer-type",
+        "SentencePieceTokenizer",
+        "--tokenizer-model",
+        args.tokenizer_model,
+        "--json-keys",
+        args.text_key,
+        "--workers",
+        str(args.workers),
         "--append-eod",
     ]
 
@@ -638,7 +661,7 @@ def preprocess_patok(args, input_path):
     print()
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             check=True,
             capture_output=False,
@@ -657,7 +680,7 @@ def preprocess_patok(args, input_path):
             print("=" * 80)
             print("✓ Patok Preprocessing Complete!")
             print("=" * 80)
-            print(f"Renaming output files (removing _text_document suffix)...")
+            print("Renaming output files (removing _text_document suffix)...")
             bin_file_megatron.rename(bin_file)
             idx_file_megatron.rename(idx_file)
 
@@ -668,7 +691,7 @@ def preprocess_patok(args, input_path):
             print(f"Binary file: {bin_file} ({bin_file.stat().st_size / 1e9:.2f} GB)")
             print(f"Index file:  {idx_file} ({idx_file.stat().st_size / 1e6:.2f} MB)")
             print()
-            print(f"Patok processing statistics:")
+            print("Patok processing statistics:")
             print(f"  Original tokens:   {total_original_tokens:,}")
             print(f"  Processed tokens:  {total_processed_tokens:,}")
             if total_original_tokens > 0:

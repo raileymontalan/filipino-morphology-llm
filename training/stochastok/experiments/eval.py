@@ -6,17 +6,16 @@ NOTE: This requires the stochastok training environment with specific model inte
 
 import hydra
 import torch
+from models.build_models import build_model
 
 # Legacy import - use evaluation.evaluators.registry instead
 # from evals.load_evaluators import load_evaluator
 from evaluation.evaluators.registry import load_evaluator
-from models.build_models import build_model
 
 
 @hydra.main(config_path="configs", config_name="test")
 def main(cfg):
-    """run the main eval loop"""
-
+    """run the main eval loop."""
     # load checkpoint from the path if there
     if "model_ckpt" in cfg:
         # set the checkpoint path to absolute path
@@ -32,7 +31,9 @@ def main(cfg):
     benchmark_names = cfg["testing"]["benchmarks"]
     benchmark_names = [str(benchmark_name) for benchmark_name in benchmark_names]
     evaluator = load_evaluator(
-        evaluator_name=cfg["testing"]["evaluator_name"], model=model, benchmarks=benchmark_names
+        evaluator_name=cfg["testing"]["evaluator_name"],
+        model=model,
+        benchmarks=benchmark_names,
     )
 
     # run the evaluator

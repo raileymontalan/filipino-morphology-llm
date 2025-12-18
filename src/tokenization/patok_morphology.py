@@ -6,13 +6,12 @@ This module implements affix-aware and reduplication-aware tokenization
 using Aho-Corasick automaton for efficient affix detection.
 """
 
-import os
 import random
-import numpy as np
+from typing import List, Optional, Tuple
+
 import ahocorasick
-import json
+import numpy as np
 from tqdm import tqdm
-from typing import List, Tuple, Optional
 
 from .base_processor import TokenizerProcessor
 
@@ -58,7 +57,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         """
         # Initialize base class (handles tokenizer, tokenizer_name, expansions)
         super().__init__(tokenizer)
-        
+
         # Patok-specific parameters
         self.prefix_file = prefix_file
         self.infix_file = infix_file
@@ -80,7 +79,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         # Use base class method to set expansions (with caching)
         self.set_expansions()
 
-        print(f"Initialized MorphologyAwarePatokProcessor:")
+        print("Initialized MorphologyAwarePatokProcessor:")
         print(f"  - {len(self.affixes)} affix versions loaded")
         print(f"  - {len(self.affix_ids)} affix token IDs")
         print(f"  - {len(self.expansions)} expandable tokens")
@@ -88,9 +87,10 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
     def _build_affix_list(self) -> List[str]:
         """
         Given a prefix file, generate four versions of each prefix: original ('ma'), space-prepended (' ma'),
-        capitalized ('Ma'), space-prepeneded and capitalized (' Ma'). Then, generate two versions of each
-        suffix: original ('an') and space-appended ('an '). Combine all expanded prefixes + infixes +
-        expanded suffixes into one list.
+        capitalized ('Ma'), space-prepended and capitalized (' Ma'). Then, generate two versions of each suffix:
+        original ('an') and space-appended ('an '). Combine all expanded prefixes + infixes + expanded suffixes into
+        one list.
+
         Args:
             prefix_file (string): path to prefix file if any
             infix_file (string): path to infix file if any
@@ -126,12 +126,14 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         # iterate through each prefix
         for p in prefix:
             # generate each version of the prefix and add to expanded_prefixes
-            expanded_prefixes.extend([
-                p,            # original
-                " " + p,      # space-prepended
-                p.capitalize(),      # capitalized
-                " " + p.capitalize() # space + capital
-            ])
+            expanded_prefixes.extend(
+                [
+                    p,  # original
+                    " " + p,  # space-prepended
+                    p.capitalize(),  # capitalized
+                    " " + p.capitalize(),  # space + capital
+                ]
+            )
 
         # initialize empty list for the suffix versions
         expanded_suffixes = []
@@ -139,10 +141,12 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         # iterate through each suffix
         for s in suffix:
             # generate each version of the suffix and add to expanded_suffixes
-            expanded_suffixes.extend([
-                s,            # original
-                s + " ",      # space-appended
-            ])
+            expanded_suffixes.extend(
+                [
+                    s,  # original
+                    s + " ",  # space-appended
+                ]
+            )
 
         # Combine everything and remove duplicates
         all_affix_versions = expanded_prefixes + infix + expanded_suffixes
@@ -165,7 +169,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         """
         if not affixes:
             return None
-            
+
         affix_finder = ahocorasick.Automaton()
 
         for affix in affixes:
@@ -177,25 +181,25 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
     def _generate_affix_ids(self, affixes: List[str]) -> List[int]:
         """
         Get token IDs of affixes that are in the tokenizer's vocabulary.
-        
+
         Args:
             affixes: List of affix strings
-            
+
         Returns:
             List of token IDs corresponding to affixes in vocabulary
         """
         mergeable_ranks = self.get_mergeable_ranks()
         affix_ids = []
-        
+
         for aff in affixes:
             try:
-                aff_bytes = aff.encode('utf-8')
+                aff_bytes = aff.encode("utf-8")
                 if aff_bytes in mergeable_ranks:
                     affix_ids.append(mergeable_ranks[aff_bytes])
             except (UnicodeEncodeError, AttributeError):
                 # Skip affixes that can't be encoded
                 continue
-        
+
         return affix_ids
 
     def find_affixes(self, s: str) -> List[Tuple[int, str]]:
@@ -210,7 +214,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         """
         if self.affix_finder is None:
             return []
-            
+
         matches = []
         for end_index, aff in self.affix_finder.iter(s):
             start_index = end_index - len(aff) + 1
@@ -249,7 +253,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
             start_idx = random.randint(0, len(token_ids) - n)
 
             # Get tokens to contract
-            for_contraction = token_ids[start_idx:start_idx + n]
+            for_contraction = token_ids[start_idx : start_idx + n]
 
             # if tokenizer has bos and eos token ids
             if hasattr(self.tokenizer, "bos_token_id"):
@@ -261,7 +265,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
                         break
 
                     start_idx = random.randint(0, len(token_ids) - n)
-                    for_contraction = token_ids[start_idx:start_idx + n]
+                    for_contraction = token_ids[start_idx : start_idx + n]
 
             # Check if any token is already an affix
             affix_in_tokens = any(tok_id in self.affix_ids for tok_id in for_contraction)
@@ -277,8 +281,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
             has_overlap = len(affix_indices) != len(set(affix_indices))
 
             # Determine affix awareness threshold
-            awareness = (self.affix_awareness_if_overlap if has_overlap
-                        else self.affix_awareness)
+            awareness = self.affix_awareness_if_overlap if has_overlap else self.affix_awareness
 
             # Random test for affix awareness
             if not affix_in_tokens or random.random() >= awareness:
@@ -305,7 +308,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
 
         # if there are no affixes, return token in a list
         # or if RNG dictates that the affix won't be split off
-        if len(affix_matches) == 0 or random.random()>self.affix_awareness:
+        if len(affix_matches) == 0 or random.random() > self.affix_awareness:
             return [token]
 
         # initialize list that will contain affix matches with space
@@ -313,10 +316,10 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         affixes_with_space = []
 
         # iterate through each affix match
-        for idx,affix in affix_matches:
+        for idx, affix in affix_matches:
             # if an affix match has a space, add that match to affixes_with_spaces
-            if ' ' in affix:
-                affixes_with_space.append((idx,affix))
+            if " " in affix:
+                affixes_with_space.append((idx, affix))
 
         # if there are affixes with spaces, constrain selection to these
         if len(affixes_with_space) > 0:
@@ -326,11 +329,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         idx, affix = random.choice(affix_matches)
 
         # Split token at affix boundary
-        pieces = [
-            token[:idx],
-            affix,
-            token[idx + len(affix):]
-        ]
+        pieces = [token[:idx], affix, token[idx + len(affix) :]]
 
         # Remove empty strings
         return [p for p in pieces if p]
@@ -357,7 +356,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         """Split off first instance of any 2-letter repetition."""
         for i in range(len(s)):
             if i + 4 <= len(s):
-                chunk = s[i:i+4]
+                chunk = s[i : i + 4]
                 first_pair = chunk[:2]
                 second_pair = chunk[2:4]
 
@@ -367,7 +366,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
                         tokens.append(s[:i])
                     tokens.append(first_pair)
                     # Remove first instance of repetition
-                    tokens.append(s[i:].replace(first_pair, '', 1))
+                    tokens.append(s[i:].replace(first_pair, "", 1))
                     return [t for t in tokens if t]
 
         return [s]
@@ -385,7 +384,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
 
         try:
             token_ids = [self.tokenizer.encode(s, add_special_tokens=False) for s in token_list]
-        except:
+        except Exception:
             token_ids = [self.tokenizer.encode(s) for s in token_list]
         # Flatten
         return [tid for group in token_ids for tid in group]
@@ -395,7 +394,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         token_ids: List[int],
         expand_prop: Optional[float] = None,
         max_num_to_expand: Optional[int] = None,
-        disable_tqdm: bool = True
+        disable_tqdm: bool = True,
     ) -> List[int]:
         """
         Stochastically expand non-affix tokens.
@@ -433,9 +432,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
             # Expand if possible
             if token_id in self.expansions:
                 chosen_expansion = random.choice(self.expansions[token_id])
-                token_ids = (token_ids[:idx] +
-                           list(chosen_expansion) +
-                           token_ids[idx+1:])
+                token_ids = token_ids[:idx] + list(chosen_expansion) + token_ids[idx + 1 :]
                 num_expanded += 1
 
         return token_ids
@@ -445,7 +442,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         token_ids: List[int],
         contract_prop: Optional[float] = None,
         expand_prop: Optional[float] = None,
-        disable_tqdm: bool = True
+        disable_tqdm: bool = True,
     ) -> List[int]:
         """
         Main Patok pipeline: contract-expand with morphological awareness.
@@ -476,10 +473,11 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
 
         num_to_contract = int(len(token_ids) * contract_prop)
 
-        for _ in tqdm(range(num_to_contract),
-                     desc='Contracting and expanding w/ morphology-awareness',
-                     disable=disable_tqdm):
-
+        for _ in tqdm(
+            range(num_to_contract),
+            desc="Contracting and expanding w/ morphology-awareness",
+            disable=disable_tqdm,
+        ):
             # Contract random tokens
             contracted, start_idx, end_idx = self.contract_randomly(token_ids)
 
@@ -496,9 +494,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
             token_ids[start_idx:end_idx] = new_token_ids
 
         # Final stochastic expansion of non-affixes
-        token_ids = self.stochastok_expand_nonaffs(
-            token_ids, expand_prop, disable_tqdm=disable_tqdm
-        )
+        token_ids = self.stochastok_expand_nonaffs(token_ids, expand_prop, disable_tqdm=disable_tqdm)
 
         return token_ids
 
@@ -507,7 +503,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         text: str,
         contract_prop: Optional[float] = None,
         expand_prop: Optional[float] = None,
-        disable_tqdm: bool = True
+        disable_tqdm: bool = True,
     ) -> List[int]:
         """
         Tokenize text with morphology-aware Patok processing.
@@ -529,7 +525,7 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
             token_ids,
             contract_prop=contract_prop,
             expand_prop=expand_prop,
-            disable_tqdm=disable_tqdm
+            disable_tqdm=disable_tqdm,
         )
 
         return token_ids
@@ -542,11 +538,10 @@ class MorphologyAwarePatokProcessor(TokenizerProcessor):
         """Decode token IDs to list of token strings."""
         try:
             list_of_tok_strings = [
-                self.tokenizer.decode_single_token_bytes(tid).decode("utf-8", "replace")
-                for tid in token_ids
+                self.tokenizer.decode_single_token_bytes(tid).decode("utf-8", "replace") for tid in token_ids
             ]
 
-        except:
+        except Exception:
             list_of_tok_strings = [self.tokenizer.decode(tid) for tid in token_ids]
 
         return list_of_tok_strings

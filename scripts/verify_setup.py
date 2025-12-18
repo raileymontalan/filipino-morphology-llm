@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 
+
 def check_directory_structure():
     """Check that all required directories exist."""
     print("Checking directory structure...")
@@ -42,6 +43,7 @@ def check_directory_structure():
 
     print("  All directories present!\n")
     return True
+
 
 def check_key_files():
     """Check that key files exist."""
@@ -82,6 +84,7 @@ def check_key_files():
     print("  All key files present!\n")
     return True
 
+
 def check_imports():
     """Check that key modules can be imported."""
     print("Checking imports...")
@@ -116,6 +119,7 @@ def check_imports():
     print("  All imports successful!\n")
     return True
 
+
 def check_data_files():
     """Check that data files are present."""
     print("Checking data files...")
@@ -126,7 +130,7 @@ def check_data_files():
             num_affixes = len([line for line in f if line.strip()])
         print(f"  ✓ Filipino affixes: {num_affixes} affixes")
     else:
-        print(f"  ✗ Filipino affixes file not found")
+        print("  ✗ Filipino affixes file not found")
         return False
 
     benchmark_dir = Path("data/benchmarks")
@@ -136,11 +140,12 @@ def check_data_files():
         for f in sorted(benchmark_files):
             print(f"    - {f.name}")
     else:
-        print(f"  ✗ Benchmark directory not found")
+        print("  ✗ Benchmark directory not found")
         return False
 
     print()
     return True
+
 
 def main():
     """Run all verification checks."""
@@ -188,6 +193,7 @@ def main():
     else:
         print("✗ Some checks failed. Please review the output above.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

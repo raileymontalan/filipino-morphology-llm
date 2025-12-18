@@ -31,10 +31,11 @@ os.environ.setdefault("TRANSFORMERS_CACHE", "/workspace/.cache/huggingface")
 try:
     import nemo
     import nemo.collections.llm as llm
+    from megatron.core.distributed import DistributedDataParallelConfig
+    from megatron.core.optimizer import OptimizerConfig
     from nemo import lightning as nl
     from nemo.collections.llm import PreTrainingDataModule
-    from megatron.core.optimizer import OptimizerConfig
-    from megatron.core.distributed import DistributedDataParallelConfig
+
     print(f"✓ Running in NeMo Framework {nemo.__version__}")
 except ImportError as e:
     print(f"✗ Error: {e}")
@@ -51,18 +52,19 @@ except ImportError as e:
 
 
 def parse_args():
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Continued pretraining of Gemma 2 2B in NeMo container",
-        allow_abbrev=False  # Prevent argument abbreviation conflicts with torchrun
+        allow_abbrev=False,  # Prevent argument abbreviation conflicts with torchrun
     )
-    
+
     # Data arguments
     parser.add_argument(
         "--data-path",
         type=str,
         nargs="+",
         default=["/workspace/data/processed/seapile-v2"],
-        help="Path prefix(es) for preprocessed Megatron binary files (without .bin/.idx extension). Can specify multiple paths for parallel chunks.",
+        help="Path prefix(es) for preprocessed Megatron binary files. Can specify multiple paths for parallel chunks.",
     )
     parser.add_argument(
         "--seq-length",
@@ -70,7 +72,7 @@ def parse_args():
         default=2048,
         help="Sequence length for training",
     )
-    
+
     # Training arguments
     parser.add_argument(
         "--max-steps",
@@ -96,7 +98,7 @@ def parse_args():
         default=8,
         help="Number of GPUs to use",
     )
-    
+
     # Optimizer arguments
     parser.add_argument(
         "--lr",
@@ -116,7 +118,7 @@ def parse_args():
         default=50,
         help="Number of warmup steps (10% of total for 100-step run)",
     )
-    
+
     # Checkpoint arguments
     parser.add_argument(
         "--checkpoint-dir",
@@ -134,9 +136,9 @@ def parse_args():
         "--resume-from",
         type=str,
         default="",
-        help="Path to pre-converted NeMo checkpoint (use scripts/convert_hf_to_nemo.py first). Empty = train from scratch.",
+        help="Path to pre-converted NeMo checkpoint (use scripts/convert_hf_to_nemo.py first).",
     )
-    
+
     # Logging arguments
     parser.add_argument(
         "--wandb-project",
@@ -162,7 +164,7 @@ def parse_args():
         default=10,
         help="Log metrics every N steps",
     )
-    
+
     # Validation arguments
     parser.add_argument(
         "--val-check-interval",
@@ -170,7 +172,7 @@ def parse_args():
         default=1000,  # Match checkpoint interval to avoid frequent saves
         help="Run validation every N steps",
     )
-    
+
     args, unknown = parser.parse_known_args()
     if unknown:
         # Filter out empty strings from unknown args (torchrun artifact)
@@ -188,14 +190,14 @@ def parse_args():
 def setup_wandb(args):
     """Set up Weights & Biases logging."""
     from pytorch_lightning.loggers import WandbLogger
-    
+
     # Check for API key
     if not os.getenv("WANDB_API_KEY"):
         print("⚠  WARNING: WANDB_API_KEY not found in environment.")
         print("   Set it with: export WANDB_API_KEY='your-key-here'")
         print("   Disabling WandB logging")
         os.environ["WANDB_MODE"] = "disabled"
-    
+
     return WandbLogger(
         project=args.wandb_project,
         name=args.wandb_name,
@@ -206,7 +208,7 @@ def setup_wandb(args):
 
 def main():
     args = parse_args()
-    
+
     # Print configuration
     print("\n" + "=" * 80)
     print("Continued Pretraining Configuration (100-Step Run)")
@@ -214,21 +216,21 @@ def main():
     for arg, value in vars(args).items():
         print(f"{arg:25s}: {value}")
     print("=" * 80 + "\n")
-    
+
     # Verify preprocessed data exists (Megatron binary format)
     # The data path should be a prefix like "data/processed/seapile-v2"
     # which will have corresponding files: seapile-v2.bin and .idx
     # Support multiple paths for parallel preprocessing chunks
     data_prefixes = args.data_path if isinstance(args.data_path, list) else [args.data_path]
-    
+
     print(f"✓ Verifying {len(data_prefixes)} data path(s)...")
     total_size_gb = 0
     verified_paths = []
-    
+
     for data_prefix in data_prefixes:
         bin_path = Path(f"{data_prefix}.bin")
         idx_path = Path(f"{data_prefix}.idx")
-        
+
         if not bin_path.exists() or not idx_path.exists():
             print(f"✗ Error: Preprocessed Megatron binary files not found for {data_prefix}")
             print(f"  Expected: {bin_path}")
@@ -237,30 +239,33 @@ def main():
             print("Please preprocess your data first:")
             print("  # Single file:")
             print("  python scripts/preprocess_data.py \\")
-            print(f"    --input data/corpora/seapile-v2.jsonl \\")
+            print("    --input data/corpora/seapile-v2.jsonl \\")
             print(f"    --output-prefix {data_prefix} \\")
-            print(f"    --tokenizer-model google/gemma-3-1b-pt")
+            print("    --tokenizer-model google/gemma-3-1b-pt")
             print()
             print("  # Or parallel chunks:")
             print("  qsub -J 1-N jobs/preprocess_data_parallel.pbs")
             sys.exit(1)
-        
+
         size_gb = bin_path.stat().st_size / 1e9
         total_size_gb += size_gb
         verified_paths.append(data_prefix)
         print(f"  ✓ {data_prefix}: {size_gb:.2f} GB")
-    
+
     print(f"✓ Total data size: {total_size_gb:.2f} GB across {len(verified_paths)} file(s)")
-    
+
     # Set up WandB logger
     print("Setting up WandB logger...")
     wandb_logger = setup_wandb(args)
-    
+
     # Configure the data module with Gemma tokenizer
     # The data was preprocessed with Gemma tokenizer, so we must use the same tokenizer
     print(f"Configuring data module with {len(verified_paths)} data path(s)...")
     print("Loading Gemma 2 tokenizer via NeMo wrapper...")
-    from nemo.collections.common.tokenizers.huggingface.auto_tokenizer import AutoTokenizer as NeMoAutoTokenizer
+    from nemo.collections.common.tokenizers.huggingface.auto_tokenizer import (
+        AutoTokenizer as NeMoAutoTokenizer,
+    )
+
     nemo_tokenizer = NeMoAutoTokenizer("google/gemma-2-2b")
 
     data = PreTrainingDataModule(
@@ -275,7 +280,7 @@ def main():
         reset_attention_mask=True,
         eod_mask_loss=True,  # Mask loss at end-of-document tokens
     )
-    
+
     # Set up optimizer
     print(f"Configuring optimizer (lr={args.lr})...")
     optimizer = nl.MegatronOptimizerModule(
@@ -297,7 +302,7 @@ def main():
             min_lr=args.min_lr,
         ),
     )
-    
+
     # Checkpoint configuration
     # NOTE: Checkpoints are 30-35GB each with distributed optimizer state
     # Save every 1000 steps to avoid filling disk
@@ -311,7 +316,7 @@ def main():
         # Note: train_time_interval conflicts with every_n_train_steps, use only one
         filename="{val_loss:.2f}-{step}-{consumed_samples}",
     )
-    
+
     # Training configuration
     print(f"Configuring trainer with {args.devices} GPUs...")
     trainer = nl.Trainer(
@@ -341,7 +346,7 @@ def main():
         logger=wandb_logger,
         callbacks=[checkpoint_callback],
     )
-    
+
     # Train the model
     print("\n" + "=" * 80)
     print("Starting Continued Pretraining Run")
@@ -354,7 +359,7 @@ def main():
     print(f"Batch size: {args.global_batch_size} (global), {args.micro_batch_size} (micro)")
     print(f"Sequence length: {args.seq_length}")
     print("=" * 80 + "\n")
-    
+
     # Configure model (Gemma 2 2B - matches data tokenizer)
     print("Creating model from configuration...")
 
@@ -394,13 +399,14 @@ def main():
         )
         resume_config = None
         use_pretrained_path = None
-    
+
     # Load pretrained weights if specified (for continued pretraining)
     if use_pretrained_path:
         print(f"\nLoading pretrained weights from: {use_pretrained_path}")
         print("(Optimizer and scheduler state will be initialized from scratch)")
         # Use NeMo's checkpoint format: weights/common.pt
         import torch
+
         weights_path = f"{use_pretrained_path}/weights/common.pt"
         if Path(weights_path).exists():
             checkpoint = torch.load(weights_path, map_location="cpu")
@@ -422,21 +428,21 @@ def main():
         optim=optimizer,
         resume=resume_config,
     )
-    
+
     print("\n" + "=" * 80)
     print("✓ 100-Step Training Run Completed!")
     print("=" * 80)
     print(f"Checkpoints saved to: {args.checkpoint_dir}")
     print(f"Logs saved to: {args.log_dir}")
     print("\nTo continue training for more steps, run:")
-    print(f"  # Singularity/Apptainer:")
+    print("  # Singularity/Apptainer:")
     print(f"  ./run_in_singularity.sh python {__file__} \\")
-    print(f"    --max-steps 1000 \\")
+    print("    --max-steps 1000 \\")
     print(f"    --checkpoint-dir {args.checkpoint_dir}")
-    print(f"")
-    print(f"  # Enroot:")
+    print("")
+    print("  # Enroot:")
     print(f"  ./run_in_enroot.sh python {__file__} \\")
-    print(f"    --max-steps 1000 \\")
+    print("    --max-steps 1000 \\")
     print(f"    --checkpoint-dir {args.checkpoint_dir}")
     print("=" * 80 + "\n")
 

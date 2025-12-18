@@ -110,13 +110,13 @@ $CONTAINER_RUNTIME exec "$SIF_FILE" python -c "
 try:
     import nemo
     print(f'✓ NeMo version: {nemo.__version__}')
-    
+
     import nemo.collections.llm as llm
     print('✓ NeMo LLM collections available')
-    
+
     from megatron.core import parallel_state
     print('✓ Megatron-Core available')
-    
+
     print('\n✓ All core components verified!')
 except Exception as e:
     print(f'✗ Error: {e}')

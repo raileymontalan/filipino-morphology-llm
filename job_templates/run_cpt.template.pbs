@@ -290,7 +290,7 @@ ENROOT_ENV=""
 echo "Collecting environment variables to pass to container..."
 while IFS= read -r line; do
     var_name=$(echo "$line" | cut -d '=' -f 1)
-    
+
     if [[ -n "$var_name" && "$var_name" =~ $SEARCH_PATTERN ]]; then
         ENROOT_ENV="${ENROOT_ENV} -e ${var_name}=${!var_name}"
     fi
@@ -331,21 +331,21 @@ launch_cmd="bash ${BASH_SCRIPT} \
 # Multi-node execution
 if [ ${NUM_NODES} -gt 1 ]; then
     echo "Multi-node training detected (${NUM_NODES} nodes)"
-    
+
     # Get node rank for this node
     export NODE_RANK=$(cat $PBS_NODEFILE | grep -n $(hostname) | cut -d: -f1 | head -1)
     export NODE_RANK=$((NODE_RANK - 1))
-    
+
     echo "Node rank: ${NODE_RANK}"
-    
+
     # Append node rank to launch command
     launch_cmd="${launch_cmd} ${NODE_RANK}"
-    
+
     # Launch on all nodes
     for i in $(seq 0 $((NUM_NODES - 1))); do
         node=$(sed -n "$((i + 1))p" $PBS_NODEFILE)
         echo "Launching on node ${i}: ${node}"
-        
+
         if [ $i -eq 0 ]; then
             # Master node (this node)
             enroot start --rw \
@@ -364,14 +364,14 @@ if [ ${NUM_NODES} -gt 1 ]; then
                 > ${LOG_DIR}/node_${i}.log 2>&1 &
         fi
     done
-    
+
     # Wait for all background jobs
     wait
 else
     # Single node execution
     echo "Single-node training"
     launch_cmd="${launch_cmd} 0"
-    
+
     enroot start --rw \
         ${ENROOT_ENV} \
         ${ENROOT_MOUNTS} \

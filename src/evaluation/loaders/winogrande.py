@@ -4,14 +4,12 @@ from datasets import load_dataset
 
 SPLIT_REMAP = {"test": "validation", "validation": "train", "train": "train"}
 INDEX_MAP = {"1": 0, "2": 1, "3": 2, "4": 3, "A": 0, "B": 1, "C": 2, "D": 3, "E": 4}
-import random
+import random  # noqa: E402
 
 
 def load_winogrande(split="test"):
     """Load and process the benchmark"""
-    base_dataset = load_dataset(
-        "allenai/winogrande", "winogrande_xs", trust_remote_code=True
-    )[SPLIT_REMAP[split]]
+    base_dataset = load_dataset("allenai/winogrande", "winogrande_xs", trust_remote_code=True)[SPLIT_REMAP[split]]
     index = list(range(len(base_dataset)))
     if split == "train":
         index = index[: len(index) // 2]

@@ -3,12 +3,13 @@ A collection of metrics for evaluating models
 """
 
 import torch
-
 from trainers.utils import aggregate_value
+
 
 def accuracy_metric(confidences):
     """
-    Calculate the accuracy of the model over a path_prob
+    Calculate the accuracy of the model over a path_prob.
+
     Assume that the ground truth is the first element in the list
     Args:
         confidences: (B, N) tensor of confidences
@@ -16,13 +17,13 @@ def accuracy_metric(confidences):
         accuracy: float of accuracy
     """
     _, predicted = torch.max(confidences, 1)
-    ## aggregate the tensor values
     return aggregate_value((predicted == 0).float().mean())
 
 
 def path_confidence(confidences):
     """
     Calculate the path confidence of the model.
+
     Assume that the ground truth is the first element in the list
     Args:
         confidences: (B, N) tensor of confidences
@@ -31,12 +32,13 @@ def path_confidence(confidences):
     """
     softmaxed = torch.nn.functional.softmax(confidences, dim=-1)
     softmaxed = softmaxed[:, 0]
-    ## aggregate the tensor values
     return aggregate_value(softmaxed.mean())
+
 
 def ground_confidence(confidences):
     """
-    Calculate the confidence of the model on the ground truth
+    Calculate the confidence of the model on the ground truth.
+
     Assume that the ground truth is the first element in the list
     Args:
         confidences: (B, N) tensor of confidences
@@ -48,15 +50,16 @@ def ground_confidence(confidences):
     """
     return confidences[:, 0].mean()
 
+
 def num_options(confidences):
-    """
-    Calculate the number of options
-    """
+    """Calculate the number of options."""
     return confidences.shape[1]
+
 
 def normalized_accuracy(confidences):
     """
-    Accuracy of model normalized so that 0 is random guessing and 1 is perfect accuracy
+    Accuracy of model normalized so that 0 is random guessing and 1 is perfect accuracy.
+
     Assume that the ground truth is the first element in the list
     Args:
         confidences: (B, N) tensor of confidences
@@ -67,12 +70,14 @@ def normalized_accuracy(confidences):
     accuracy = (predicted == 0).float().mean()
     num_options = confidences.shape[1]
     normalized_accuracy = (accuracy * num_options - 1) / (num_options - 1)
-    ## aggregate the tensor values
     return aggregate_value(normalized_accuracy)
+
 
 def normalized_path_confidence(confidences):
     """
-    Path confidence normalized so that 0 is all having the same confidence and 1 is much higher confidence on the ground truth
+    Path confidence normalized so that 0 is all having the same confidence and 1
+    is much higher confidence on the ground truth.
+
     Assume that the ground truth is the first element in the list
     Args:
         confidences: (B, N) tensor of confidences
@@ -83,7 +88,6 @@ def normalized_path_confidence(confidences):
     softmaxed = softmaxed[:, 0].mean()
     num_options = confidences.shape[1]
     normalized_path_confidence = (softmaxed * num_options - 1) / (num_options - 1)
-    ## aggregate the tensor values
     return aggregate_value(normalized_path_confidence)
 
 
@@ -121,7 +125,8 @@ def f1_score_metric(confidences):
 
 def precision_metric(confidences):
     """
-    Calculate precision for MCQ
+    Calculate precision for MCQ.
+
     Assume that the ground truth is the first element in the list
     Args:
         confidences: (B, N) tensor of confidences
@@ -137,7 +142,8 @@ def precision_metric(confidences):
 
 def recall_metric(confidences):
     """
-    Calculate recall for MCQ
+    Calculate recall for MCQ.
+
     Assume that the ground truth is the first element in the list
     Args:
         confidences: (B, N) tensor of confidences
@@ -161,4 +167,4 @@ MCQ_METRIC_DICT = {
     "num_options": num_options,
     "normalized_accuracy": normalized_accuracy,
     "normalized_path_confidence": normalized_path_confidence,
-    }
+}

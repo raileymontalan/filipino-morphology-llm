@@ -7,18 +7,12 @@ import os
 
 import torch
 from torch.distributed import init_process_group
-
 from trainers.base_trainer import BaseTrainer
-from trainers.dataset_interface_pretraining import BaseDatasetRandom
 from trainers.dataset_interface_instruction import DatasetInterfaceInstruction
-from trainers.loss_fn import (
-    cross_entropy_loss_fn,
-)
+from trainers.dataset_interface_pretraining import BaseDatasetRandom
+from trainers.loss_fn import cross_entropy_loss_fn
 from trainers.optimizer import configure_nanoGPT_optimizer
-from trainers.scheduler import (
-    CosineLRScheduler,
-    DropoutScheduler,
-)
+from trainers.scheduler import CosineLRScheduler, DropoutScheduler
 
 
 def ddp_setup(rank, world_size):
@@ -71,13 +65,11 @@ def build_trainer(cfg, model, gpu_id):
         train_dataset = BaseDatasetRandom(cfg=cfg, split="train")
         val_dataset = BaseDatasetRandom(cfg=cfg, split="val")
 
-
     # wrap in dataloaders
     train_dataloader = torch.utils.data.DataLoader(
         dataset=train_dataset,
         batch_size=cfg["trainer"]["training"]["batch_size"],
         shuffle=False,
-
     )
     val_dataloader = torch.utils.data.DataLoader(
         dataset=val_dataset,

@@ -1,13 +1,11 @@
 """
-A simple wrapper around the GPT2 Tokenizer to
-standardize the interface for tokenization.
+A simple wrapper around the GPT2 Tokenizer to standardize the interface for tokenization.
 """
 
-import os
-import json
-from tqdm import tqdm
 import random
+
 import numpy as np
+from tqdm import tqdm
 
 from .base_processor import TokenizerProcessor
 
@@ -15,8 +13,10 @@ from .base_processor import TokenizerProcessor
 class StochastokProcessor(TokenizerProcessor):
     """
     A processor that applies stochastok expansion to the tokenized data.
+
     Uses the shared expansion building logic from base processor.
     """
+
     def __init__(self, tokenizer, expand_prop=None):
         super().__init__(tokenizer)
         self.expand_prop = expand_prop
@@ -26,6 +26,7 @@ class StochastokProcessor(TokenizerProcessor):
     def expand(self, token_ids, expand_prop=0.1, max_num_to_expand=None, disable_tqdm=True):
         """
         Expand the sequence of tokens by splitting tokens.
+
         Args:
             token_ids (list): list of token_ids to expand.
             expand_prop (float): proportion of tokens to (try) expanding.
@@ -43,7 +44,7 @@ class StochastokProcessor(TokenizerProcessor):
             if token_id in self.expansions:
                 possible_expansions = self.expansions[token_id]
                 chosen_expansion = random.choice(possible_expansions)
-                token_ids = token_ids[:idx] + list(chosen_expansion) + token_ids[idx+1:]
+                token_ids = token_ids[:idx] + list(chosen_expansion) + token_ids[idx + 1 :]
                 num_expanded += 1
         # print(f"Attempted to expand {num_to_expand}, expanded {num_expanded}")
         # print(f"Original length {len(token_ids)-num_expanded}, new length {len(token_ids)}")

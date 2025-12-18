@@ -1,5 +1,5 @@
 """
-Tokenization-Only Analysis Script
+Tokenization-Only Analysis Script.
 
 Compares tokenization approaches on Filipino morphology:
 1. GPT-2 baseline (standard BPE)
@@ -16,22 +16,22 @@ No model training required - pure tokenization comparison.
 
 import json
 import sys
-sys.path.insert(0, '.')
+
+sys.path.insert(0, ".")
+
+from typing import Dict, List, Tuple
 
 import tiktoken
-from collections import defaultdict
-from typing import List, Dict, Tuple
-import pandas as pd
 
-from src.analysis.morphological_metrics import (
-    MorphologicalAnnotation,
-    MorphologicalMetrics,
-    generate_morphological_report
-)
 from src.analysis.information_theory import (
     InformationTheoreticAnalysis,
     MorphemeTokenAlignment,
-    generate_information_theoretic_report
+    generate_information_theoretic_report,
+)
+from src.analysis.morphological_metrics import (
+    MorphologicalAnnotation,
+    MorphologicalMetrics,
+    generate_morphological_report,
 )
 
 
@@ -53,9 +53,7 @@ def tokenize_with_gpt2(word: str) -> Tuple[List[str], List[int]]:
 
 
 def tokenize_with_patok(
-    word: str,
-    morpheme_boundaries: List[int],
-    base_tokenizer: str = "gpt2"
+    word: str, morpheme_boundaries: List[int], base_tokenizer: str = "gpt2"
 ) -> Tuple[List[str], List[int]]:
     """
     Simulate Patok tokenization.
@@ -117,7 +115,7 @@ def create_morphological_annotation(
     word: str,
     morpheme_boundaries: List[int],
     token_boundaries: List[int],
-    morphemes: List[str]
+    morphemes: List[str],
 ) -> MorphologicalAnnotation:
     """Create annotation for morphological metrics."""
     return MorphologicalAnnotation(
@@ -125,7 +123,7 @@ def create_morphological_annotation(
         morphemes=morphemes,
         morpheme_boundaries=set(morpheme_boundaries),
         tokens=[],  # Not needed for boundary analysis
-        token_boundaries=set(token_boundaries)
+        token_boundaries=set(token_boundaries),
     )
 
 
@@ -139,9 +137,9 @@ def analyze_tokenization(annotations: List[Dict], tokenizer_name: str):
     morph_annotations = []
 
     for i, ann in enumerate(annotations[:100]):  # Analyze first 100 for speed
-        word = ann['word']
-        morphemes = ann['morphemes']
-        morpheme_boundaries = ann.get('boundaries', [])
+        word = ann["word"]
+        morphemes = ann["morphemes"]
+        morpheme_boundaries = ann.get("boundaries", [])
 
         # Tokenize
         if tokenizer_name == "gpt2":
@@ -155,22 +153,22 @@ def analyze_tokenization(annotations: List[Dict], tokenizer_name: str):
         token_boundaries = find_token_boundaries(word, tokens)
 
         # Create annotation
-        morph_ann = create_morphological_annotation(
-            word, morpheme_boundaries, token_boundaries, morphemes
-        )
+        morph_ann = create_morphological_annotation(word, morpheme_boundaries, token_boundaries, morphemes)
         morph_annotations.append(morph_ann)
 
         # Record results
-        results.append({
-            'word': word,
-            'num_morphemes': len(morphemes),
-            'num_tokens': len(tokens),
-            'morpheme_boundaries': morpheme_boundaries,
-            'token_boundaries': token_boundaries,
-            'tokens': tokens,
-            'morphemes': morphemes,
-            'fragmentation': len(tokens) / len(morphemes) if morphemes else 0,
-        })
+        results.append(
+            {
+                "word": word,
+                "num_morphemes": len(morphemes),
+                "num_tokens": len(tokens),
+                "morpheme_boundaries": morpheme_boundaries,
+                "token_boundaries": token_boundaries,
+                "tokens": tokens,
+                "morphemes": morphemes,
+                "fragmentation": len(tokens) / len(morphemes) if morphemes else 0,
+            }
+        )
 
     # Compute morphological metrics
     print("Computing morphological metrics...")
@@ -186,24 +184,21 @@ def analyze_tokenization(annotations: List[Dict], tokenizer_name: str):
     print("\nComputing information-theoretic metrics...")
     alignments = []
     for ann, res in zip(morph_annotations, results):
-        alignment = MorphemeTokenAlignment(
-            morphemes=tuple(res['morphemes']),
-            tokens=tuple(res['tokens'])
-        )
+        alignment = MorphemeTokenAlignment(morphemes=tuple(res["morphemes"]), tokens=tuple(res["tokens"]))
         alignments.append(alignment)
 
-    it_analysis = InformationTheoreticAnalysis(alignments)
+    InformationTheoreticAnalysis(alignments)
 
     print(f"\n{generate_information_theoretic_report(alignments)}")
 
     return {
-        'tokenizer': tokenizer_name,
-        'results': results,
-        'morph_score': morph_score,
-        'boundary_f1': boundary_f1,
-        'fragmentation': fragmentation,
-        'morphological_annotations': morph_annotations,
-        'it_alignments': alignments,
+        "tokenizer": tokenizer_name,
+        "results": results,
+        "morph_score": morph_score,
+        "boundary_f1": boundary_f1,
+        "fragmentation": fragmentation,
+        "morphological_annotations": morph_annotations,
+        "it_alignments": alignments,
     }
 
 
@@ -214,9 +209,9 @@ def compare_tokenizers(gpt2_analysis, patok_analysis):
     print(f"{'=' * 70}\n")
 
     metrics = [
-        ('MorphScore', 'morph_score'),
-        ('Boundary F1', 'boundary_f1'),
-        ('Fragmentation', 'fragmentation'),
+        ("MorphScore", "morph_score"),
+        ("Boundary F1", "boundary_f1"),
+        ("Fragmentation", "fragmentation"),
     ]
 
     print(f"{'Metric':<20} {'GPT-2':<15} {'Patok':<15} {'Δ':<15}")
@@ -228,8 +223,8 @@ def compare_tokenizers(gpt2_analysis, patok_analysis):
 
         if isinstance(gpt2_val, dict):
             # Handle F1 dict
-            gpt2_val = gpt2_val.get('f1', 0)
-            patok_val = patok_val.get('f1', 0)
+            gpt2_val = gpt2_val.get("f1", 0)
+            patok_val = patok_val.get("f1", 0)
 
         delta = patok_val - gpt2_val
         delta_str = f"{delta:+.3f}"
@@ -242,7 +237,7 @@ def compare_tokenizers(gpt2_analysis, patok_analysis):
     print("Interpretation:")
     print("-" * 70)
 
-    morph_delta = patok_analysis['morph_score'] - gpt2_analysis['morph_score']
+    morph_delta = patok_analysis["morph_score"] - gpt2_analysis["morph_score"]
     if morph_delta > 0.1:
         print("✓ Patok shows significantly better morpheme boundary alignment")
     elif morph_delta > 0.05:
@@ -250,7 +245,7 @@ def compare_tokenizers(gpt2_analysis, patok_analysis):
     else:
         print("⚠ Little difference in morpheme boundary alignment")
 
-    frag_delta = patok_analysis['fragmentation'] - gpt2_analysis['fragmentation']
+    frag_delta = patok_analysis["fragmentation"] - gpt2_analysis["fragmentation"]
     if frag_delta < -0.2:
         print("✓ Patok produces less fragmented representations")
     elif frag_delta < -0.1:
@@ -262,13 +257,14 @@ def compare_tokenizers(gpt2_analysis, patok_analysis):
 
 
 def main():
+    """Run comprehensive tokenization analysis."""
     print("=" * 70)
     print("TOKENIZATION-ONLY ANALYSIS")
     print("=" * 70)
 
     # Load annotations
     print("\nLoading annotations...")
-    annotations = load_annotations('data/corpora/affix_annotations.jsonl')
+    annotations = load_annotations("data/corpora/affix_annotations.jsonl")
     print(f"Loaded {len(annotations)} annotated words")
 
     # Analyze GPT-2
@@ -283,19 +279,19 @@ def main():
     # Save results
     print("\nSaving results...")
     results = {
-        'gpt2': {
-            'morph_score': gpt2_analysis['morph_score'],
-            'boundary_f1': gpt2_analysis['boundary_f1'],
-            'fragmentation': gpt2_analysis['fragmentation'],
+        "gpt2": {
+            "morph_score": gpt2_analysis["morph_score"],
+            "boundary_f1": gpt2_analysis["boundary_f1"],
+            "fragmentation": gpt2_analysis["fragmentation"],
         },
-        'patok': {
-            'morph_score': patok_analysis['morph_score'],
-            'boundary_f1': patok_analysis['boundary_f1'],
-            'fragmentation': patok_analysis['fragmentation'],
+        "patok": {
+            "morph_score": patok_analysis["morph_score"],
+            "boundary_f1": patok_analysis["boundary_f1"],
+            "fragmentation": patok_analysis["fragmentation"],
         },
     }
 
-    with open('results/tokenization_analysis.json', 'w') as f:
+    with open("results/tokenization_analysis.json", "w") as f:
         json.dump(results, f, indent=2, default=str)
 
     print("✓ Results saved to results/tokenization_analysis.json")
@@ -305,5 +301,5 @@ def main():
     print("=" * 70)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

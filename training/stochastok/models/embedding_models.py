@@ -5,7 +5,6 @@ the tokenizer(s), token embeddings and positional encodings
 """
 
 import torch
-
 from models.components.positional_encoding import build_positional_encodings
 
 
@@ -90,7 +89,9 @@ class Embedder(EmbedderInterface):
         super().__init__()
         # build the tokenizer
         self.tokenizer = tokenizer
-        assert self.tokenizer.vocab_size == model_cfg["vocab_size"], f"{model_cfg['vocab_size']=} must match {self.tokenizer.vocab_size=}"
+        assert (
+            self.tokenizer.vocab_size == model_cfg["vocab_size"]
+        ), f"{model_cfg['vocab_size']=} must match {self.tokenizer.vocab_size=}"
 
         # build the token embeddings
         self.token_embedder = torch.nn.Embedding(

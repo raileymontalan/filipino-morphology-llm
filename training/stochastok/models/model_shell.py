@@ -4,9 +4,7 @@ core model and LM head.
 """
 
 import torch
-
 from models import core_models, embedding_models, model_heads
-
 
 
 class ModelShell(torch.nn.Module):
@@ -55,7 +53,6 @@ class ModelShell(torch.nn.Module):
         x = self.model_head(x)
 
         return x
-
 
     @torch.no_grad()
     def loglikelihood(self, prefixes, continuations):

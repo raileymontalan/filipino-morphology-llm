@@ -6,6 +6,7 @@ standardize the interface for tokenization.
 import tiktoken
 import torch
 
+
 class BaseTokenizer:
     """A simple wrapper around the GPT2 BPE Tokenizer."""
 
@@ -19,7 +20,7 @@ class BaseTokenizer:
     def pad_batch(self, token_lists, direction="right"):
         """Pad a list of token lists to the same length,
         and return the padded tensor, and mask tensor.
-        
+
         Direction can be 'right' or 'left' to specify the padding direction.
         """
         max_len = max(len(tokens) for tokens in token_lists)

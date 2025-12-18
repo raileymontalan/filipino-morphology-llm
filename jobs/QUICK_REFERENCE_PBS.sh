@@ -3,8 +3,8 @@
 # ============================================================================
 # PBS Quick Reference: Running CPT with NeMo Framework Container
 # ============================================================================
-# 
-# This guide covers everything you need to run Continued Pretraining (CPT) 
+#
+# This guide covers everything you need to run Continued Pretraining (CPT)
 # on the Hopper cluster using PBS and Enroot.
 #
 # Files:
@@ -158,7 +158,7 @@ done
 # Check PBS job script
 cat jobs/run_cpt.pbs
 
-# Check bash script  
+# Check bash script
 cat jobs/run_cpt.sh
 
 # Check Python script

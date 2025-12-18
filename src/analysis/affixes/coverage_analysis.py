@@ -7,44 +7,43 @@ Usage:
     python scripts/analyze_affix_coverage.py --compare gpt2 cl100k_base
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 import argparse
+import os
+import sys
 from pathlib import Path
+
 from src.tokenization.affix_decomposition import AffixDecomposer, compare_tokenizers
+
+# Setup path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 def main():
+    """Analyze affix coverage across different tokenizers."""
     parser = argparse.ArgumentParser(description="Analyze affix vocabulary coverage")
     parser.add_argument(
         "--tokenizer",
         type=str,
         default="gpt2",
-        help="Tokenizer to analyze (gpt2, cl100k_base, etc.)"
+        help="Tokenizer to analyze (gpt2, cl100k_base, etc.)",
     )
     parser.add_argument(
         "--affixes-file",
         type=str,
         default="data/affixes/filipino_affixes.txt",
-        help="Path to affixes file"
+        help="Path to affixes file",
     )
-    parser.add_argument(
-        "--compare",
-        nargs="+",
-        help="Compare multiple tokenizers"
-    )
+    parser.add_argument("--compare", nargs="+", help="Compare multiple tokenizers")
     parser.add_argument(
         "--output-dir",
         type=str,
         default="data/vocabularies",
-        help="Output directory for analysis files"
+        help="Output directory for analysis files",
     )
     parser.add_argument(
         "--export-table",
         action="store_true",
-        help="Export decomposition table for Patok"
+        help="Export decomposition table for Patok",
     )
 
     args = parser.parse_args()
@@ -115,6 +114,7 @@ def main():
 
                 # Save as JSON
                 import json
+
                 table_file = output_dir / f"decomposition_table_{args.tokenizer}.json"
                 with open(table_file, "w") as f:
                     # Convert token IDs to strings for JSON serialization
@@ -135,6 +135,7 @@ def main():
         except Exception as e:
             print(f"Error analyzing tokenizer: {e}")
             import traceback
+
             traceback.print_exc()
             return 1
 

@@ -31,8 +31,9 @@ from datasets import load_dataset
 
 # TOTAL SIZE OF 67K, need to split into train, test, val
 
+
 def load_blimp(split="test"):
-    """Load and process the benchmark"""
+    """Load and process the benchmark."""
     base_dataset = load_dataset("WillHeld/blimp")["train"]
     index = list(range(len(base_dataset)))
     random.shuffle(index)

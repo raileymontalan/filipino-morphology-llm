@@ -1,4 +1,4 @@
-"""Various Scheduler"""
+"""Various Scheduler."""
 
 import math
 
@@ -6,23 +6,24 @@ import torch.nn as nn
 
 
 class LRScheduler:
-    """Constant LR scheduler"""
+    """Constant LR scheduler."""
 
     def __init__(self, lr):
+        """Initialize the scheduler with a learning rate."""
         self.lr = lr
 
     def get_lr(self, _):
-        """Return Constant LR"""
+        """Return constant learning rate."""
         return self.lr
 
     def step(self, optimizer, iter_num):
-        """Step the scheduler"""
+        """Step the scheduler and update optimizer learning rate."""
         lr = self.get_lr(iter_num)
         self.apply_lr(optimizer, lr)
         return lr
 
     def apply_lr(self, optimizer, lr):
-        """Apply the learning rate to the optimizer"""
+        """Apply the learning rate to the optimizer."""
         for param_group in optimizer.param_groups:
             param_group["lr"] = lr
 
@@ -31,7 +32,7 @@ class CosineLRScheduler(LRScheduler):
     """Basic Cosine LR scheduler with warmup and decay."""
 
     def __init__(self, warmup_iters, decay_iters, lr, min_lr):
-        """Initialize the scheduler"""
+        """Initialize the cosine scheduler."""
         super().__init__(lr)
         self.warmup_iters = warmup_iters
         self.decay_iters = decay_iters
@@ -39,7 +40,7 @@ class CosineLRScheduler(LRScheduler):
         self.min_lr = min_lr
 
     def get_lr(self, iter_num):
-        """Get the learning rate for the iteration number"""
+        """Get the learning rate for the given iteration number."""
         if iter_num < self.warmup_iters:
             return self.lr * iter_num / self.warmup_iters
         return self.min_lr + 0.5 * (self.lr - self.min_lr) * (
@@ -48,33 +49,34 @@ class CosineLRScheduler(LRScheduler):
 
 
 class DropoutScheduler:
-    """Constant Dropout Scheduler"""
+    """Constant Dropout Scheduler."""
 
     def __init__(self, dropout_p=0.1):
+        """Initialize the dropout scheduler with a dropout probability."""
         self.dropout_p = dropout_p
 
     def get_dropout(self, _):
-        """Return Constant Dropout"""
+        """Return constant dropout probability."""
         return self.dropout_p
 
     def set_dropout(self, model, dropout_p):
-        """Set the dropout probability for the model"""
+        """Set the dropout probability for the model."""
         for module in model.modules():
             if isinstance(module, nn.Dropout):
                 module.p = dropout_p
 
     def step(self, model, iter_num):
-        """Step the scheduler"""
+        """Step the scheduler and update model dropout probability."""
         dropout_p = self.get_dropout(iter_num)
         self.set_dropout(model, dropout_p)
         return dropout_p
 
 
 class LinearDropoutScheduler(DropoutScheduler):
-    """Dropout Scheduler"""
+    """Dropout Scheduler."""
 
     def __init__(self, start_iter, end_iter, start_dropout_p, end_dropout_p):
-        """Initialize the dropout schedule"""
+        """Initialize the linear dropout schedule."""
         super().__init__(start_dropout_p)
         self.start_iter = start_iter
         self.end_iter = end_iter
@@ -82,18 +84,21 @@ class LinearDropoutScheduler(DropoutScheduler):
         self.end_dropout_p = end_dropout_p
 
     def get_dropout(self, iter_num):
-        """Return Constant Dropout"""
+        """Get the dropout probability for the given iteration number."""
         if iter_num < self.start_iter:
             return self.start_dropout_p
         if iter_num >= self.end_iter:
             return self.end_dropout_p
-        return self.start_dropout_p + (iter_num - self.start_iter) * (
-            self.end_dropout_p - self.start_dropout_p
-        ) / (self.end_iter - self.start_iter)
+        return self.start_dropout_p + (iter_num - self.start_iter) * (self.end_dropout_p - self.start_dropout_p) / (
+            self.end_iter - self.start_iter
+        )
 
 
 class TriangleDropoutScheduler(DropoutScheduler):
-    """Triangle Dropout Scheduler. Ref: https://arxiv.org/pdf/1506.01186"""
+    """Triangle Dropout Scheduler.
+
+    Ref: https://arxiv.org/pdf/1506.01186.
+    """
 
     def __init__(
         self,
@@ -102,12 +107,7 @@ class TriangleDropoutScheduler(DropoutScheduler):
         num_iterations,
         num_cycles=4,
     ):
-        """Initialize the dropout schedule
-        Args:
-            dropout_trough: The minimum dropout probability
-            dropout_peak: The maximum dropout probability
-            num_iterations: The total number of iterations
-            num_cycles: The number of cycles"""
+        """Initialize the triangle dropout schedule."""
         super().__init__(dropout_trough)
         self.dropout_trough = dropout_trough
         self.dropout_peak = dropout_peak
@@ -115,17 +115,17 @@ class TriangleDropoutScheduler(DropoutScheduler):
         self.cycle_length = self.total_iterations // num_cycles
 
     def get_dropout(self, iter_num):
+        """Get the dropout probability for the given iteration number."""
         cycle_position = iter_num % self.cycle_length
         half_cycle = self.cycle_length / 2
         if cycle_position < half_cycle:
-            return self.dropout_trough + (self.dropout_peak - self.dropout_trough) * (
-                cycle_position / half_cycle
-            )
+            return self.dropout_trough + (self.dropout_peak - self.dropout_trough) * (cycle_position / half_cycle)
         return self.dropout_peak - (self.dropout_peak - self.dropout_trough) * (
             (cycle_position - half_cycle) / half_cycle
         )
 
     def step(self, model, iter_num):
+        """Step the scheduler and update model dropout probability."""
         dropout_p = self.get_dropout(iter_num)
         self.set_dropout(model, dropout_p)
         return dropout_p

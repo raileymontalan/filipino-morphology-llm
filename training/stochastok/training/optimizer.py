@@ -24,22 +24,14 @@ def configure_nanoGPT_optimizer(model, weight_decay, learning_rate, betas):
     ]
     num_decay_params = sum(p.numel() for p in decay_params)
     num_nodecay_params = sum(p.numel() for p in nodecay_params)
-    print(
-        f"num decayed parameter tensors: {len(decay_params)},"
-        f" with {num_decay_params:,} parameters"
-    )
-    print(
-        f"num non-decayed parameter tensors: {len(nodecay_params)},"
-        f" with {num_nodecay_params:,} parameters"
-    )
-   # Check if fused AdamW is available and use it only if CUDA is available
+    print(f"num decayed parameter tensors: {len(decay_params)}," f" with {num_decay_params:,} parameters")
+    print(f"num non-decayed parameter tensors: {len(nodecay_params)}," f" with {num_nodecay_params:,} parameters")
+    # Check if fused AdamW is available and use it only if CUDA is available
     fused_available = "fused" in inspect.signature(torch.optim.AdamW).parameters
     use_fused = fused_available and torch.cuda.is_available()
     extra_args = {"fused": use_fused} if use_fused else {}
-    
-    optimizer = torch.optim.AdamW(
-        optim_groups, lr=learning_rate, betas=betas, **extra_args
-    )
+
+    optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, **extra_args)
     print(f"Using fused AdamW: {use_fused}\n")
 
     return optimizer

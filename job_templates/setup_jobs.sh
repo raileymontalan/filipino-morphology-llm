@@ -149,7 +149,7 @@ for template in ${TEMPLATE_DIR}/*.template.pbs ${TEMPLATE_DIR}/*.template.sh; do
     if [ ! -f "$template" ]; then
         continue
     fi
-    
+
     # Get filename without .template extension
     basename=$(basename "$template")
     if [[ "$basename" == *.template.pbs ]]; then
@@ -159,19 +159,19 @@ for template in ${TEMPLATE_DIR}/*.template.pbs ${TEMPLATE_DIR}/*.template.sh; do
     else
         continue
     fi
-    
+
     output="${OUTPUT_DIR}/${output_name}"
-    
+
     # Check if file already exists
     if [ -f "$output" ]; then
         echo -e "${YELLOW}⚠${NC}  ${output_name} already exists, skipping"
         ((skipped++))
         continue
     fi
-    
+
     # Copy and customize template
     cp "$template" "$output"
-    
+
     # Replace placeholders
     sed -i "s/YOUR_QUEUE_NAME/${QUEUE}/g" "$output"
     sed -i "s|/path/to/your/logs/|${LOG_DIR}/|g" "$output"
@@ -181,12 +181,12 @@ for template in ${TEMPLATE_DIR}/*.template.pbs ${TEMPLATE_DIR}/*.template.sh; do
     sed -i "s/YOUR_NCPUS/${DEFAULT_NCPUS}/g" "$output"
     sed -i "s/YOUR_MEMORY/${DEFAULT_MEMORY}/g" "$output"
     sed -i "s/YOUR_WALLTIME/${DEFAULT_WALLTIME}/g" "$output"
-    
+
     # Make shell scripts executable
     if [[ "$output_name" == *.sh ]]; then
         chmod +x "$output"
     fi
-    
+
     echo -e "${GREEN}✓${NC}  Created ${output_name}"
     ((processed++))
 done

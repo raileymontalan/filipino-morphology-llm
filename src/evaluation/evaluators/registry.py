@@ -10,8 +10,8 @@ NOTE: This registry is for the stochastok training pipeline.
 # from evals.mcqs.mcq_evaluator import MCQEvaluator
 # from evals.generation_evaluator_math import GenerationEvaluatorMath
 
-from evaluation.evaluators.mcq_evaluator import MCQEvaluator
 from evaluation.evaluators.math_evaluator import GenerationEvaluatorMath
+from evaluation.evaluators.mcq_evaluator import MCQEvaluator
 
 EVALUATORS_DICT = {
     "mcq": MCQEvaluator,
@@ -22,12 +22,12 @@ EVALUATORS_DICT = {
 def load_evaluator(evaluator_name, model, **kwargs):
     """
     Given the evaluator name, load the evaluator.
-    
+
     Args:
         evaluator_name: Name of the evaluator to load ('mcq' or 'math_generation')
         model: The model instance to evaluate
         **kwargs: Additional arguments to pass to the evaluator
-        
+
     Returns:
         An evaluator instance
     """

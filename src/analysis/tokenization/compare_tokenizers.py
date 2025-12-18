@@ -1,5 +1,5 @@
 """
-Compare Tokenization Approaches
+Compare Tokenization Approaches.
 
 Comprehensive comparison of GPT-2 baseline vs morphologically-aware tokenization
 on Filipino words with affix annotations.
@@ -10,24 +10,20 @@ Metrics:
 - Boundary F1: Precision and recall
 - Example-level analysis
 """
-from pathlib import Path
-import sys
-# Add src to path  
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / 'src'))
-
-from pathlib import Path
-import sys
-# Add src to path  
-project_root = Path(__file__).parent.parent
 
 import json
 import sys
+from pathlib import Path
+from typing import Dict, List
 
 import tiktoken
-from typing import List, Dict
-from collections import defaultdict
+
 from src.tokenization.patok_morphology import MorphologyAwarePatokProcessor
+
+# Add src to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
+
 
 def load_annotations(file_path: str, limit: int = 100) -> List[Dict]:
     """Load morpheme annotations."""
@@ -39,11 +35,13 @@ def load_annotations(file_path: str, limit: int = 100) -> List[Dict]:
             annotations.append(json.loads(line))
     return annotations
 
+
 def tokenize_word(word: str, tokenizer) -> List[str]:
     """Tokenize word and return tokens as strings."""
     token_ids = tokenizer.encode(word)
     tokens = [tokenizer.decode([tid]) for tid in token_ids]
     return tokens
+
 
 def tokenize_patok_style(word: str, morpheme_boundaries: List[int], tokenizer) -> List[str]:
     """
@@ -68,6 +66,7 @@ def tokenize_patok_style(word: str, morpheme_boundaries: List[int], tokenizer) -
 
     return all_tokens
 
+
 def find_token_boundaries(word: str, tokens: List[str]) -> List[int]:
     """Find character positions of token boundaries."""
     boundaries = []
@@ -78,13 +77,14 @@ def find_token_boundaries(word: str, tokens: List[str]) -> List[int]:
             boundaries.append(pos)
     return boundaries
 
+
 def compute_boundary_f1(token_boundaries: set, morpheme_boundaries: set) -> Dict[str, float]:
     """Compute precision, recall, and F1 for boundary detection."""
     if not morpheme_boundaries:
-        return {'precision': 0.0, 'recall': 0.0, 'f1': 0.0}
+        return {"precision": 0.0, "recall": 0.0, "f1": 0.0}
 
     if not token_boundaries:
-        return {'precision': 0.0, 'recall': 0.0, 'f1': 0.0}
+        return {"precision": 0.0, "recall": 0.0, "f1": 0.0}
 
     true_positives = len(token_boundaries & morpheme_boundaries)
     precision = true_positives / len(token_boundaries) if token_boundaries else 0.0
@@ -95,11 +95,8 @@ def compute_boundary_f1(token_boundaries: set, morpheme_boundaries: set) -> Dict
     else:
         f1 = 2 * (precision * recall) / (precision + recall)
 
-    return {
-        'precision': precision,
-        'recall': recall,
-        'f1': f1
-    }
+    return {"precision": precision, "recall": recall, "f1": f1}
+
 
 def analyze_tokenizer(annotations: List[Dict], tokenizer, mode: str = "baseline", patok_processor=None) -> Dict:
     """
@@ -122,9 +119,9 @@ def analyze_tokenizer(annotations: List[Dict], tokenizer, mode: str = "baseline"
     all_f1 = []
 
     for ann in annotations:
-        word = ann['word']
-        morphemes = ann['morphemes']
-        morpheme_boundaries = set(ann.get('boundaries', []))
+        word = ann["word"]
+        morphemes = ann["morphemes"]
+        morpheme_boundaries = set(ann.get("boundaries", []))
 
         if not morpheme_boundaries:
             continue
@@ -153,22 +150,24 @@ def analyze_tokenizer(annotations: List[Dict], tokenizer, mode: str = "baseline"
         total_tokens += len(tokens)
         total_morphemes += len(morphemes)
 
-        all_precision.append(f1_scores['precision'])
-        all_recall.append(f1_scores['recall'])
-        all_f1.append(f1_scores['f1'])
+        all_precision.append(f1_scores["precision"])
+        all_recall.append(f1_scores["recall"])
+        all_f1.append(f1_scores["f1"])
 
-        results.append({
-            'word': word,
-            'morphemes': morphemes,
-            'tokens': tokens,
-            'morph_boundaries': sorted(morpheme_boundaries),
-            'token_boundaries': sorted(token_boundaries),
-            'aligned': aligned,
-            'total_morph': len(morpheme_boundaries),
-            'score': aligned / len(morpheme_boundaries) if morpheme_boundaries else 0,
-            'f1': f1_scores['f1'],
-            'fragmentation': len(tokens) / len(morphemes) if morphemes else 0
-        })
+        results.append(
+            {
+                "word": word,
+                "morphemes": morphemes,
+                "tokens": tokens,
+                "morph_boundaries": sorted(morpheme_boundaries),
+                "token_boundaries": sorted(token_boundaries),
+                "aligned": aligned,
+                "total_morph": len(morpheme_boundaries),
+                "score": (aligned / len(morpheme_boundaries) if morpheme_boundaries else 0),
+                "f1": f1_scores["f1"],
+                "fragmentation": len(tokens) / len(morphemes) if morphemes else 0,
+            }
+        )
 
     morph_score = total_aligned / total_morpheme_boundaries if total_morpheme_boundaries > 0 else 0
     fragmentation = total_tokens / total_morphemes if total_morphemes > 0 else 0
@@ -178,20 +177,17 @@ def analyze_tokenizer(annotations: List[Dict], tokenizer, mode: str = "baseline"
     avg_f1 = sum(all_f1) / len(all_f1) if all_f1 else 0
 
     return {
-        'mode': mode,
-        'morph_score': morph_score,
-        'fragmentation': fragmentation,
-        'boundary_f1': {
-            'precision': avg_precision,
-            'recall': avg_recall,
-            'f1': avg_f1
-        },
-        'total_aligned': total_aligned,
-        'total_boundaries': total_morpheme_boundaries,
-        'total_tokens': total_tokens,
-        'total_morphemes': total_morphemes,
-        'results': results
+        "mode": mode,
+        "morph_score": morph_score,
+        "fragmentation": fragmentation,
+        "boundary_f1": {"precision": avg_precision, "recall": avg_recall, "f1": avg_f1},
+        "total_aligned": total_aligned,
+        "total_boundaries": total_morpheme_boundaries,
+        "total_tokens": total_tokens,
+        "total_morphemes": total_morphemes,
+        "results": results,
     }
+
 
 def print_comparison(gpt2_analysis: Dict, patok_analysis: Dict):
     """Print side-by-side comparison."""
@@ -216,7 +212,7 @@ def print_comparison(gpt2_analysis: Dict, patok_analysis: Dict):
         # Get values
         gpt2_val = gpt2_analysis
         patok_val = patok_analysis
-        for key in metric_path.split('.'):
+        for key in metric_path.split("."):
             gpt2_val = gpt2_val[key]
             patok_val = patok_val[key]
 
@@ -240,7 +236,7 @@ def print_comparison(gpt2_analysis: Dict, patok_analysis: Dict):
     print("=" * 80)
     print()
 
-    morph_delta = patok_analysis['morph_score'] - gpt2_analysis['morph_score']
+    morph_delta = patok_analysis["morph_score"] - gpt2_analysis["morph_score"]
     if morph_delta > 0.2:
         print("✓ Patok shows SIGNIFICANT improvement in morpheme boundary alignment")
         print(f"  → {morph_delta:.1%} absolute improvement in MorphScore")
@@ -254,7 +250,7 @@ def print_comparison(gpt2_analysis: Dict, patok_analysis: Dict):
 
     print()
 
-    frag_delta = patok_analysis['fragmentation'] - gpt2_analysis['fragmentation']
+    frag_delta = patok_analysis["fragmentation"] - gpt2_analysis["fragmentation"]
     if frag_delta < -0.3:
         print("✓ Patok produces SIGNIFICANTLY less fragmented representations")
         print(f"  → {abs(frag_delta):.2f} fewer tokens per morpheme")
@@ -268,7 +264,7 @@ def print_comparison(gpt2_analysis: Dict, patok_analysis: Dict):
 
     print()
 
-    f1_delta = patok_analysis['boundary_f1']['f1'] - gpt2_analysis['boundary_f1']['f1']
+    f1_delta = patok_analysis["boundary_f1"]["f1"] - gpt2_analysis["boundary_f1"]["f1"]
     if f1_delta > 0.2:
         print("✓ Patok shows STRONG improvement in boundary detection (F1)")
         print(f"  → {f1_delta:.1%} absolute improvement")
@@ -279,6 +275,7 @@ def print_comparison(gpt2_analysis: Dict, patok_analysis: Dict):
 
     print()
 
+
 def print_examples(gpt2_analysis: Dict, patok_analysis: Dict, n: int = 10):
     """Print side-by-side examples."""
     print("=" * 80)
@@ -286,29 +283,33 @@ def print_examples(gpt2_analysis: Dict, patok_analysis: Dict, n: int = 10):
     print("=" * 80)
     print()
 
-    for i in range(min(n, len(gpt2_analysis['results']))):
-        gpt2_ex = gpt2_analysis['results'][i]
-        patok_ex = patok_analysis['results'][i]
+    for i in range(min(n, len(gpt2_analysis["results"]))):
+        gpt2_ex = gpt2_analysis["results"][i]
+        patok_ex = patok_analysis["results"][i]
 
-        word = gpt2_ex['word']
-        morphemes = ' + '.join(gpt2_ex['morphemes'])
+        word = gpt2_ex["word"]
+        morphemes = " + ".join(gpt2_ex["morphemes"])
 
-        print(f"{i+1}. {word}")
+        print(f"{i + 1}. {word}")
         print(f"   Morphemes:  {morphemes}")
         print(f"   GPT-2:      {' | '.join(gpt2_ex['tokens'])}")
-        print(f"               MorphScore={gpt2_ex['score']:.2f}, F1={gpt2_ex['f1']:.2f}, Frag={gpt2_ex['fragmentation']:.2f}")
+        print(f"        MorphScore={gpt2_ex['score']:.2f}, F1={gpt2_ex['f1']:.2f}, Frag={gpt2_ex['fragmentation']:.2f}")
         print(f"   Patok:      {' | '.join(patok_ex['tokens'])}")
-        print(f"               MorphScore={patok_ex['score']:.2f}, F1={patok_ex['f1']:.2f}, Frag={patok_ex['fragmentation']:.2f}")
+        print(
+            f"        MorphScore={patok_ex['score']:.2f}, F1={patok_ex['f1']:.2f}, Frag={patok_ex['fragmentation']:.2f}"
+        )
 
         # Indicate improvement
-        if patok_ex['score'] > gpt2_ex['score']:
-            print(f"               ✓ Better boundary alignment")
-        if patok_ex['fragmentation'] < gpt2_ex['fragmentation']:
-            print(f"               ✓ Less fragmented")
+        if patok_ex["score"] > gpt2_ex["score"]:
+            print("               ✓ Better boundary alignment")
+        if patok_ex["fragmentation"] < gpt2_ex["fragmentation"]:
+            print("               ✓ Less fragmented")
 
         print()
 
+
 def main():
+    """Compare tokenization approaches on Filipino words."""
     print("=" * 80)
     print("TOKENIZATION COMPARISON: GPT-2 BASELINE VS MORPHOLOGICALLY-AWARE")
     print("=" * 80)
@@ -316,7 +317,7 @@ def main():
 
     # Load annotations
     print("Loading annotations...")
-    annotations = load_annotations('data/corpora/affix_annotations.jsonl', limit=100)
+    annotations = load_annotations("data/corpora/affix_annotations.jsonl", limit=100)
     print(f"  ✓ Loaded {len(annotations)} annotated words")
     print()
 
@@ -365,34 +366,34 @@ def main():
     print()
 
     results = {
-        'gpt2': {
-            'morph_score': gpt2_analysis['morph_score'],
-            'fragmentation': gpt2_analysis['fragmentation'],
-            'boundary_f1': gpt2_analysis['boundary_f1'],
+        "gpt2": {
+            "morph_score": gpt2_analysis["morph_score"],
+            "fragmentation": gpt2_analysis["fragmentation"],
+            "boundary_f1": gpt2_analysis["boundary_f1"],
         },
-        'oracle': {
-            'morph_score': oracle_analysis['morph_score'],
-            'fragmentation': oracle_analysis['fragmentation'],
-            'boundary_f1': oracle_analysis['boundary_f1'],
+        "oracle": {
+            "morph_score": oracle_analysis["morph_score"],
+            "fragmentation": oracle_analysis["fragmentation"],
+            "boundary_f1": oracle_analysis["boundary_f1"],
         },
-        'patok': {
-            'morph_score': patok_analysis['morph_score'],
-            'fragmentation': patok_analysis['fragmentation'],
-            'boundary_f1': patok_analysis['boundary_f1'],
+        "patok": {
+            "morph_score": patok_analysis["morph_score"],
+            "fragmentation": patok_analysis["fragmentation"],
+            "boundary_f1": patok_analysis["boundary_f1"],
         },
-        'oracle_vs_baseline': {
-            'morph_score': oracle_analysis['morph_score'] - gpt2_analysis['morph_score'],
-            'fragmentation': oracle_analysis['fragmentation'] - gpt2_analysis['fragmentation'],
-            'boundary_f1': oracle_analysis['boundary_f1']['f1'] - gpt2_analysis['boundary_f1']['f1'],
+        "oracle_vs_baseline": {
+            "morph_score": oracle_analysis["morph_score"] - gpt2_analysis["morph_score"],
+            "fragmentation": oracle_analysis["fragmentation"] - gpt2_analysis["fragmentation"],
+            "boundary_f1": oracle_analysis["boundary_f1"]["f1"] - gpt2_analysis["boundary_f1"]["f1"],
         },
-        'patok_vs_baseline': {
-            'morph_score': patok_analysis['morph_score'] - gpt2_analysis['morph_score'],
-            'fragmentation': patok_analysis['fragmentation'] - gpt2_analysis['fragmentation'],
-            'boundary_f1': patok_analysis['boundary_f1']['f1'] - gpt2_analysis['boundary_f1']['f1'],
-        }
+        "patok_vs_baseline": {
+            "morph_score": patok_analysis["morph_score"] - gpt2_analysis["morph_score"],
+            "fragmentation": patok_analysis["fragmentation"] - gpt2_analysis["fragmentation"],
+            "boundary_f1": patok_analysis["boundary_f1"]["f1"] - gpt2_analysis["boundary_f1"]["f1"],
+        },
     }
 
-    with open('results/tokenization_comparison.json', 'w') as f:
+    with open("results/tokenization_comparison.json", "w") as f:
         json.dump(results, f, indent=2)
 
     print("✓ Results saved to results/tokenization_comparison.json")
@@ -401,5 +402,6 @@ def main():
     print("✅ TOKENIZATION COMPARISON COMPLETE")
     print("=" * 80)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
