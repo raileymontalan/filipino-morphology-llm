@@ -63,12 +63,6 @@ def parse_args():
     parser.add_argument(
         "--tokenizer-model",
         type=str,
-        default="/workspace/data/tokenizer/gemma2_tokenizer.model",
-        help="Path to SentencePiece tokenizer.model file",
-    )
-    parser.add_argument(
-        "--hf-tokenizer",
-        type=str,
         default="google/gemma-2-2b",
         help="HuggingFace tokenizer name for stochastok/patok modes",
     )
@@ -81,7 +75,7 @@ def parse_args():
     parser.add_argument(
         "--workers",
         type=int,
-        default=64,
+        default=32,
         help="Number of worker processes",
     )
     parser.add_argument(
@@ -110,6 +104,12 @@ def parse_args():
         help="Probability of affix-aware processing (patok mode only, default: 0.95)",
     )
     parser.add_argument(
+        "--affix-awareness-if-overlap",
+        type=float,
+        default=0.75,
+        help="Affix awareness probability when multiple affixes overlap (patok mode only, default: 0.75)",
+    )
+    parser.add_argument(
         "--prefix-file",
         type=str,
         default="/workspace/data/affixes_filipino/prefix.txt",
@@ -126,12 +126,6 @@ def parse_args():
         type=str,
         default="/workspace/data/affixes_filipino/suffix.txt",
         help="Path to suffix file (patok mode only)",
-    )
-    parser.add_argument(
-        "--expansions-file",
-        type=str,
-        default=None,
-        help="Path to pre-built expansions JSON file (patok mode only, speeds up initialization)",
     )
     parser.add_argument(
         "--seed",
@@ -172,7 +166,6 @@ def main():
         print(f"Prefix file:         {args.prefix_file}")
         print(f"Infix file:          {args.infix_file}")
         print(f"Suffix file:         {args.suffix_file}")
-        print(f"Expansions file:     {args.expansions_file or '(will build from scratch)'}")
         print(f"Random seed:         {args.seed}")
     print("=" * 80)
     print()
@@ -208,13 +201,13 @@ def preprocess_vanilla(args, input_path):
     print()
     
     # Build the preprocessing command for Megatron-LM
-    # Use SentencePieceTokenizer with local tokenizer.model file
+    # Use HuggingFaceTokenizer with local tokenizer.model file
     cmd = [
         "python",
         preprocess_script,
         "--input", str(input_path),
         "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "SentencePieceTokenizer",
+        "--tokenizer-type", "HuggingFaceTokenizer",
         "--tokenizer-model", args.tokenizer_model,
         "--json-keys", args.text_key,
         "--workers", str(args.workers),
@@ -287,8 +280,8 @@ def preprocess_stochastok(args, input_path):
     print("Loading tokenizer...")
     try:
         from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
-        print(f"✓ Loaded tokenizer: {args.hf_tokenizer}")
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_model)
+        print(f"✓ Loaded tokenizer: {args.tokenizer_model}")
         print(f"  Vocab size: {tokenizer.vocab_size}")
     except Exception as e:
         print(f"✗ Error loading tokenizer: {e}")
@@ -409,7 +402,7 @@ def preprocess_stochastok(args, input_path):
         preprocess_script,
         "--input", str(temp_jsonl),
         "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "SentencePieceTokenizer",
+        "--tokenizer-type", "HuggingFaceTokenizer",
         "--tokenizer-model", args.tokenizer_model,
         "--json-keys", args.text_key,
         "--workers", str(args.workers),
@@ -496,8 +489,8 @@ def preprocess_patok(args, input_path):
     print("Loading tokenizer...")
     try:
         from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
-        print(f"✓ Loaded tokenizer: {args.hf_tokenizer}")
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_model)
+        print(f"✓ Loaded tokenizer: {args.tokenizer_model}")
         print(f"  Vocab size: {tokenizer.vocab_size}")
     except Exception as e:
         print(f"✗ Error loading tokenizer: {e}")
@@ -531,7 +524,7 @@ def preprocess_patok(args, input_path):
             contract_prop=args.contract_prop,
             expand_prop=args.expand_prop,
             affix_awareness=args.affix_awareness,
-            expansions_file=args.expansions_file,
+            affix_awareness_if_overlap=args.affix_awareness_if_overlap,
         )
         print(f"✓ MorphologyAwarePatokProcessor initialized")
         print(f"  Number of affix versions: {len(processor.affixes)}")
@@ -626,7 +619,7 @@ def preprocess_patok(args, input_path):
         preprocess_script,
         "--input", str(temp_jsonl),
         "--output-prefix", args.output_prefix,
-        "--tokenizer-type", "SentencePieceTokenizer",
+        "--tokenizer-type", "HuggingFaceTokenizer",
         "--tokenizer-model", args.tokenizer_model,
         "--json-keys", args.text_key,
         "--workers", str(args.workers),

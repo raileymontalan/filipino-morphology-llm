@@ -2,11 +2,11 @@
 """
 Split a large JSONL file into smaller chunks for parallel preprocessing.
 
-This script splits your data so you can preprocess chunks in parallel,
-then they can be blended during training.
+This script splits your data into chunks of 2^16 (65,536) lines each,
+so you can preprocess chunks in parallel, then they can be blended during training.
 
 Usage:
-    python scripts/split_jsonl.py --input data.jsonl --output-dir data/chunks --num-chunks 10
+    python scripts/split_jsonl.py --input data.jsonl --output-dir data/chunks
 """
 
 import argparse
@@ -27,19 +27,7 @@ def parse_args():
         "--output-dir",
         type=str,
         required=True,
-        help="Output directory for chunks (will create subdirectory based on tokenizer)",
-    )
-    parser.add_argument(
-        "--num-chunks",
-        type=int,
-        default=10,
-        help="Number of chunks to create",
-    )
-    parser.add_argument(
-        "--tokenizer",
-        type=str,
-        default="google/gemma-3-1b-pt",
-        help="Tokenizer name (used for organizing output directory)",
+        help="Output directory for chunks",
     )
     
     return parser.parse_args()
@@ -49,22 +37,21 @@ def main():
     args = parse_args()
     
     input_path = Path(args.input)
-    
-    # Create tokenizer-specific subdirectory
-    tokenizer_name = args.tokenizer.replace("/", "-")
-    output_dir = Path(args.output_dir) / tokenizer_name
+    input_filename = input_path.stem
+    output_dir = Path(args.output_dir) / input_filename
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Counting lines in {input_path}...")
     with open(input_path, 'r') as f:
         total_lines = sum(1 for _ in f)
     
-    lines_per_chunk = (total_lines + args.num_chunks - 1) // args.num_chunks
+    # Fixed chunk size: 2^16 lines (65,536)
+    lines_per_chunk = 2**16
+    num_chunks = (total_lines + lines_per_chunk - 1) // lines_per_chunk
     
-    print(f"Tokenizer: {args.tokenizer}")
     print(f"Total lines: {total_lines:,}")
-    print(f"Chunks: {args.num_chunks}")
-    print(f"Lines per chunk: ~{lines_per_chunk:,}")
+    print(f"Lines per chunk: {lines_per_chunk:,}")
+    print(f"Chunks: {num_chunks}")
     print()
     
     print("Splitting file...")
@@ -93,10 +80,10 @@ def main():
     print()
     print("Next steps:")
     print(f"  1. Submit parallel preprocessing (recommended):")
-    print(f"     qsub -J 1-{chunk_idx} -v TOKENIZER={args.tokenizer} jobs/preprocess_data_parallel.pbs")
+    print(f"     qsub -J 1-{chunk_idx} -v TOKENIZER=tokenizer jobs/preprocess_data_parallel.pbs")
     print()
     print(f"  2. Then use chunks in training:")
-    print(f"     export DATA_PATH=$(training/nemo/data/generate_chunk_paths.sh {chunk_idx} {args.tokenizer})")
+    print(f"     export DATA_PATH=$(training/nemo/data/generate_chunk_paths.sh {chunk_idx} tokenizer)")
     print(f"     qsub jobs/run_cpt.pbs")
 
 
