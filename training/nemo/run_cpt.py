@@ -50,6 +50,99 @@ except ImportError as e:
 # Use NeMo 2.1+ container for Gemma3 support
 
 
+class EvaluationCallback(nl.pytorch.callbacks.Callback):
+    """Callback to run evaluation after each checkpoint save."""
+    
+    def __init__(self, eval_script_path="/workspace/scripts/run_evaluation.py", benchmarks=None, eval_mode="mcq"):
+        super().__init__()
+        self.eval_script_path = eval_script_path
+        # Use all MCQ benchmarks by default for comprehensive evaluation
+        self.benchmarks = benchmarks or [
+            "pacute-affixation-mcq",
+            "pacute-composition-mcq", 
+            "pacute-manipulation-mcq",
+            "pacute-syllabification-mcq",
+            "hierarchical-mcq",
+            "langgame-mcq",
+            "multi-digit-addition-mcq",
+        ]
+        self.eval_mode = eval_mode
+        
+    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
+        """Run evaluation after checkpoint is saved."""
+        if not os.getenv("RUN_EVAL_ON_CHECKPOINT", "false").lower() == "true":
+            return
+            
+        # Only run on rank 0 to avoid duplicate evaluations
+        if trainer.global_rank != 0:
+            return
+            
+        print("\n" + "=" * 80)
+        print("Running Evaluation After Checkpoint Save")
+        print("=" * 80)
+        
+        # Get checkpoint path
+        ckpt_dir = trainer.checkpoint_callback.dirpath
+        current_step = trainer.global_step
+        
+        # Construct checkpoint path - find most recent checkpoint
+        import glob
+        ckpt_pattern = f"{ckpt_dir}/step={current_step}-*.ckpt"
+        ckpt_files = glob.glob(ckpt_pattern)
+        if not ckpt_files:
+            print(f"⚠ Warning: No checkpoint found matching {ckpt_pattern}")
+            return
+        
+        ckpt_path = ckpt_files[0]
+        print(f"Checkpoint: {ckpt_path}")
+        
+        # Prepare output path for evaluation results
+        eval_output = f"{ckpt_dir}/eval_step_{current_step}.json"
+        
+        # Run evaluation script
+        import subprocess
+        cmd = [
+            "python",
+            self.eval_script_path,
+            "--model", ckpt_path,
+            "--benchmarks", *self.benchmarks,
+            "--eval-mode", self.eval_mode,
+            "--output", eval_output,
+        ]
+        
+        print(f"Running: {' '.join(cmd)}")
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)  # 1 hour timeout
+            if result.returncode == 0:
+                print(f"✓ Evaluation complete: {eval_output}")
+                print(result.stdout)
+                
+                # Log results to WandB if available
+                if trainer.logger:
+                    import json
+                    try:
+                        with open(eval_output, 'r') as f:
+                            eval_results = json.load(f)
+                        # Log to WandB with step
+                        for benchmark, metrics in eval_results.items():
+                            for metric_name, value in metrics.items():
+                                trainer.logger.experiment.log({
+                                    f"eval/{benchmark}/{metric_name}": value,
+                                    "step": current_step
+                                })
+                    except Exception as e:
+                        print(f"⚠ Warning: Could not log eval results to WandB: {e}")
+            else:
+                print(f"✗ Evaluation failed with return code {result.returncode}")
+                print(result.stderr)
+        except subprocess.TimeoutExpired:
+            print("✗ Evaluation timed out after 1 hour")
+        except Exception as e:
+            print(f"✗ Evaluation error: {e}")
+        
+        print("=" * 80 + "\n")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Continued pretraining of Gemma 2 2B in NeMo container",
@@ -127,8 +220,14 @@ def parse_args():
     parser.add_argument(
         "--checkpoint-interval",
         type=int,
-        default=1000,
-        help="Save checkpoint every N steps",
+        default=20000,
+        help="Save checkpoint every N steps (default: 20000 for 100k training)",
+    )
+    parser.add_argument(
+        "--run-eval-on-checkpoint",
+        action="store_true",
+        default=False,
+        help="Run evaluation on PACUTE benchmark after saving each checkpoint",
     )
     parser.add_argument(
         "--resume-from",
@@ -300,7 +399,7 @@ def main():
     
     # Checkpoint configuration
     # NOTE: Checkpoints are 30-35GB each with distributed optimizer state
-    # Save every 1000 steps - keep all checkpoints for evaluation
+    # Save every 20k steps - 5 checkpoints total for 100k training
     print(f"Checkpoints will be saved to: {args.checkpoint_dir}")
     checkpoint_callback = nl.ModelCheckpoint(
         save_top_k=-1,  # Keep all checkpoints (not just best)
@@ -312,6 +411,20 @@ def main():
         filename="step={step}-consumed={consumed_samples}",
         verbose=True,  # Print when saving checkpoints
     )
+    
+    # Setup callbacks list
+    callbacks_list = [checkpoint_callback]
+    
+    # Add evaluation callback if requested
+    if args.run_eval_on_checkpoint:
+        print("Evaluation will run after each checkpoint save")
+        print("Benchmarks: All MCQ benchmarks (PACUTE, Hierarchical, LangGame, Multi-digit Addition)")
+        eval_callback = EvaluationCallback(
+            eval_script_path="/workspace/scripts/run_evaluation.py",
+            benchmarks=None,  # Use default (all MCQ benchmarks)
+            eval_mode="mcq"  # MCQ is faster than generative
+        )
+        callbacks_list.append(eval_callback)
     
     # Training configuration
     print(f"Configuring trainer with {args.devices} GPUs...")
@@ -341,7 +454,7 @@ def main():
         limit_val_batches=10,
         plugins=nl.MegatronMixedPrecision(precision="bf16-mixed"),
         logger=wandb_logger,
-        callbacks=[checkpoint_callback],
+        callbacks=callbacks_list,
     )
     
     # Train the model
