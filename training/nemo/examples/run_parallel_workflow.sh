@@ -2,7 +2,14 @@
 # Example workflow: Parallel preprocessing + training with chunks
 #
 # This demonstrates the complete workflow from raw JSONL to training
-# using parallel chunk preprocessing for optimal performance.
+# using automatic chunking (2^16 lines per chunk) and dynamic job arrays.
+#
+# The workflow:
+# 1. Split JSONL into chunks of 65,536 lines each
+# 2. Submit parallel preprocessing jobs (auto-detects chunk count)
+# 3. Verify all chunks were processed successfully
+# 4. Generate training data paths
+# 5. Submit training job with all chunks
 
 set -e
 
@@ -12,39 +19,72 @@ echo "=========================================="
 echo ""
 
 # Configuration
-NUM_CHUNKS=20
 INPUT_JSONL="/scratch_aisg/SPEC-SF-AISG/railey/data/corpora/seapile-v2.jsonl"
+DATASET="seapile-v2"  # Dataset name (directory under data/chunks/)
 TOKENIZER="google/gemma-3-1b-pt"
 TOKENIZER_NAME=$(echo ${TOKENIZER} | sed 's/\//-/g')  # Convert slashes to dashes
-CHUNK_DIR="/scratch_aisg/SPEC-SF-AISG/railey/data/chunks/${TOKENIZER_NAME}"
-OUTPUT_DIR="/scratch_aisg/SPEC-SF-AISG/railey/data/processed/${TOKENIZER_NAME}"
+TOKENIZATION_MODE="vanilla"  # or "stochastok" or "patok"
+SEED="42"  # Random seed for stochastok/patok modes
+EXPAND_PROP="0.1"  # For stochastok/patok modes
+CONTRACT_PROP="0.9"  # For patok mode
+AFFIX_AWARENESS="0.95"  # For patok mode
+AFFIX_AWARENESS_IF_OVERLAP="0.75"  # For patok mode
+
+# Set output directory based on tokenization mode
+if [ "${TOKENIZATION_MODE}" = "stochastok" ]; then
+    OUTPUT_DIR="/scratch_aisg/SPEC-SF-AISG/railey/data/processed/${DATASET}/${TOKENIZER_NAME}/stochastok/expand_${EXPAND_PROP}"
+elif [ "${TOKENIZATION_MODE}" = "patok" ]; then
+    OUTPUT_DIR="/scratch_aisg/SPEC-SF-AISG/railey/data/processed/${DATASET}/${TOKENIZER_NAME}/patok/expand_${EXPAND_PROP}_contract_${CONTRACT_PROP}_affix_${AFFIX_AWARENESS}_overlap_${AFFIX_AWARENESS_IF_OVERLAP}"
+else
+    OUTPUT_DIR="/scratch_aisg/SPEC-SF-AISG/railey/data/processed/${DATASET}/${TOKENIZER_NAME}/${TOKENIZATION_MODE}"
+fi
+
+CHUNK_DIR="/scratch_aisg/SPEC-SF-AISG/railey/data/chunks/${DATASET}"
 
 echo "Configuration:"
 echo "  Input: ${INPUT_JSONL}"
+echo "  Dataset: ${DATASET}"
 echo "  Tokenizer: ${TOKENIZER}"
-echo "  Tokenizer Name: ${TOKENIZER_NAME}"
-echo "  Chunks: ${NUM_CHUNKS}"
+echo "  Tokenization Mode: ${TOKENIZATION_MODE}"
+if [ "${TOKENIZATION_MODE}" = "stochastok" ]; then
+    echo "  Expand Proportion: ${EXPAND_PROP}"
+    echo "  Random Seed: ${SEED}"
+elif [ "${TOKENIZATION_MODE}" = "patok" ]; then
+    echo "  Expand Proportion: ${EXPAND_PROP}"
+    echo "  Contract Proportion: ${CONTRACT_PROP}"
+    echo "  Affix Awareness: ${AFFIX_AWARENESS}"
+    echo "  Random Seed: ${SEED}"
+fi
 echo "  Chunk dir: ${CHUNK_DIR}"
 echo "  Output dir: ${OUTPUT_DIR}"
 echo ""
 
 # Step 1: Split JSONL into chunks
-echo "Step 1: Splitting JSONL into ${NUM_CHUNKS} chunks..."
+echo "Step 1: Splitting JSONL into chunks (2^16 lines each)..."
 echo "----------------------------------------"
 python training/nemo/data/split_jsonl.py \
     --input "${INPUT_JSONL}" \
-    --output-dir "$(dirname ${CHUNK_DIR})" \
-    --num-chunks ${NUM_CHUNKS} \
-    --tokenizer "${TOKENIZER}"
+    --output-dir "data/chunks" \
 
 echo "✓ Split complete"
+echo ""
+
+# Count actual number of chunks created
+NUM_CHUNKS=$(ls -1 "${CHUNK_DIR}"/chunk_*.jsonl 2>/dev/null | wc -l)
+echo "Created ${NUM_CHUNKS} chunks"
 echo ""
 
 # Step 2: Submit parallel preprocessing jobs
 echo "Step 2: Submitting parallel preprocessing jobs..."
 echo "----------------------------------------"
-PREPROCESS_JOB=$(qsub -J 1-${NUM_CHUNKS} -v TOKENIZER="${TOKENIZER}" jobs/preprocess_data_parallel.pbs)
-PREPROCESS_JOB_ID=$(echo $PREPROCESS_JOB | cut -d'[' -f1)
+if [ "${TOKENIZATION_MODE}" = "stochastok" ]; then
+    PREPROCESS_JOB=$("../../scripts/submit_preprocessing.sh" "${DATASET}" "${TOKENIZER}" "${TOKENIZATION_MODE}" "${SEED}" "${EXPAND_PROP}")
+elif [ "${TOKENIZATION_MODE}" = "patok" ]; then
+    PREPROCESS_JOB=$("../../scripts/submit_preprocessing.sh" "${DATASET}" "${TOKENIZER}" "${TOKENIZATION_MODE}" "${SEED}" "${EXPAND_PROP}" "${CONTRACT_PROP}" "${AFFIX_AWARENESS}" "${AFFIX_AWARENESS_IF_OVERLAP}")
+else
+    PREPROCESS_JOB=$("../../scripts/submit_preprocessing.sh" "${DATASET}" "${TOKENIZER}" "${TOKENIZATION_MODE}")
+fi
+PREPROCESS_JOB_ID=$(echo $PREPROCESS_JOB | grep -o '[0-9]\+\[[0-9]*\]' | head -1)
 
 echo "✓ Submitted job: ${PREPROCESS_JOB}"
 echo ""
@@ -72,8 +112,8 @@ echo "----------------------------------------"
 missing_chunks=0
 for i in $(seq -f "%04g" 1 ${NUM_CHUNKS}); do
     chunk_prefix="${OUTPUT_DIR}/chunk_${i}"
-    if [ ! -f "${chunk_prefix}_text_document.bin" ] || [ ! -f "${chunk_prefix}_text_document.idx" ]; then
-        echo "✗ Missing: ${chunk_prefix}_text_document.{bin,idx}"
+    if [ ! -f "${chunk_prefix}.bin" ] || [ ! -f "${chunk_prefix}.idx" ]; then
+        echo "✗ Missing: ${chunk_prefix}.{bin,idx}"
         missing_chunks=$((missing_chunks + 1))
     fi
 done
@@ -91,7 +131,13 @@ echo ""
 # Step 4: Generate chunk paths for training
 echo "Step 4: Generating chunk paths for training..."
 echo "----------------------------------------"
-CHUNK_PATHS=$(training/nemo/data/generate_chunk_paths.sh ${NUM_CHUNKS} "${TOKENIZER}")
+if [ "${TOKENIZATION_MODE}" = "stochastok" ]; then
+    CHUNK_PATHS=$(training/nemo/data/generate_chunk_paths.sh "${INPUT_JSONL}" "${TOKENIZER}" "${TOKENIZATION_MODE}" "${SEED}" "${EXPAND_PROP}")
+elif [ "${TOKENIZATION_MODE}" = "patok" ]; then
+    CHUNK_PATHS=$(training/nemo/data/generate_chunk_paths.sh "${INPUT_JSONL}" "${TOKENIZER}" "${TOKENIZATION_MODE}" "${SEED}" "${EXPAND_PROP}" "${CONTRACT_PROP}" "${AFFIX_AWARENESS}" "${AFFIX_AWARENESS_IF_OVERLAP}")
+else
+    CHUNK_PATHS=$(training/nemo/data/generate_chunk_paths.sh "${INPUT_JSONL}" "${TOKENIZER}" "${TOKENIZATION_MODE}")
+fi
 echo "✓ Chunk paths generated"
 echo ""
 
@@ -108,6 +154,7 @@ echo "Workflow Complete!"
 echo "=========================================="
 echo ""
 echo "Training job submitted: ${TRAIN_JOB}"
+echo "Output will be in: ${OUTPUT_DIR}/"
 echo ""
 echo "Monitor training:"
 echo "  qstat ${TRAIN_JOB}"
