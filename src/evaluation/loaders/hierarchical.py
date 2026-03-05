@@ -55,4 +55,5 @@ def load_hierarchical(format="mcq", **kwargs):
             ground_truth = task["answer"]
             false_options = []
         
-        yield prefix, ground_truth, false_options, sample_id
+        category = f"{task.get('category', '')}/{task.get('subcategory', '')}".strip("/") or None
+        yield prefix, ground_truth, false_options, sample_id, category

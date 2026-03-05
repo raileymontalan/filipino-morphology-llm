@@ -43,4 +43,4 @@ def load_langgame(format="mcq", **kwargs):
             ground_truth = sample["answer"]
             false_options = []
         
-        yield prefix, ground_truth, false_options, sample_id
+        yield prefix, ground_truth, false_options, sample_id, None

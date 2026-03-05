@@ -13,7 +13,7 @@ import random
 import os
 
 
-def load_pacute(split="test", categories=None, **kwargs):
+def load_pacute(split="test", categories=None, format="mcq", **kwargs):
     """
     Load PACUTE benchmark.
 
@@ -42,15 +42,17 @@ def load_pacute(split="test", categories=None, **kwargs):
     tasks = []
     category_counts = {}
 
-    for category in categories:
-        mcq_file = os.path.join(project_root, f"data/benchmarks/{category}_mcq.jsonl")
+    data_file_suffix = "gen" if format == "gen" else "mcq"
 
-        if not os.path.exists(mcq_file):
-            print(f"Warning: PACUTE file not found: {mcq_file}")
+    for category in categories:
+        data_file = os.path.join(project_root, f"data/benchmarks/{category}_{data_file_suffix}.jsonl")
+
+        if not os.path.exists(data_file):
+            print(f"Warning: PACUTE file not found: {data_file}")
             continue
 
         count = 0
-        with open(mcq_file) as f:
+        with open(data_file) as f:
             for line in f:
                 task = json.loads(line)
                 task['_category'] = category  # Track source category
@@ -60,7 +62,7 @@ def load_pacute(split="test", categories=None, **kwargs):
         category_counts[category] = count
 
     total = len(tasks)
-    print(f"PACUTE: Loaded {total} tasks across {len(categories)} categories:")
+    print(f"PACUTE: Loaded {total} tasks ({format}) across {len(categories)} categories:")
     for cat, count in category_counts.items():
         print(f"  - {cat}: {count} tasks")
 
@@ -69,18 +71,20 @@ def load_pacute(split="test", categories=None, **kwargs):
 
     for i in indices:
         task = tasks[i]
-        # Get the English prompt
         prompt_data = task["prompts"][0]
         prefix = prompt_data["text_en"]
-        sample_id = task.get("id", f"pacute_mcq_{i:05d}")
+        sample_id = task.get("id", f"pacute_{format}_{i:05d}")
 
-        # Extract options
-        mcq_options = prompt_data["mcq_options"]
-        ground_truth = mcq_options["correct"]
-        false_options = [
-            mcq_options["incorrect1"],
-            mcq_options["incorrect2"],
-            mcq_options["incorrect3"]
-        ]
+        if format == "gen":
+            # Gen files use a top-level "label" field; no MCQ options.
+            ground_truth = task["label"]
+            false_options = []
+        else:
+            mcq_options = prompt_data["mcq_options"]
+            ground_truth = mcq_options["correct"]
+            false_options = [
+                v for k, v in sorted(mcq_options.items())
+                if k.startswith("incorrect")
+            ]
 
-        yield prefix, ground_truth, false_options, sample_id
+        yield prefix, ground_truth, false_options, sample_id, task.get("subcategory")
