@@ -96,6 +96,36 @@ models:
     type: it
     tokenizer: google/gemma-3-1b-pt
 
+  gemma-3-4b:
+    path: google/gemma-3-4b
+    type: pt
+    tokenizer: google/gemma-3-4b
+
+  gemma-3-4b-it:
+    path: google/gemma-3-4b-it
+    type: it
+    tokenizer: google/gemma-3-4b
+
+  gemma-3-12b:
+    path: google/gemma-3-12b
+    type: pt
+    tokenizer: google/gemma-3-12b
+
+  gemma-3-12b-it:
+    path: google/gemma-3-12b-it
+    type: it
+    tokenizer: google/gemma-3-12b
+
+  gemma-3-27b:
+    path: google/gemma-3-27b
+    type: pt
+    tokenizer: google/gemma-3-27b
+
+  gemma-3-27b-it:
+    path: google/gemma-3-27b-it
+    type: it
+    tokenizer: google/gemma-3-27b
+
   # ============================================================================
   # Llama 3.1 Family (share same tokenizer within version)
   # ============================================================================
@@ -259,3 +289,41 @@ models:
     path: cerebras/Cerebras-GPT-2.7B
     type: pt
     tokenizer: gpt2
+  # ============================================================================
+  # GLM-5 Family (744B MoE, 40B active; glm_moe_dsa arch; requires vLLM nightly)
+  # ============================================================================
+  glm-5:
+    path: zai-org/GLM-5
+    type: it
+    tokenizer: zai-org/GLM-5
+
+  glm-5-fp8:
+    path: zai-org/GLM-5-FP8
+    type: it
+    tokenizer: zai-org/GLM-5
+
+  # ============================================================================
+  # GPT-OSS Family (OpenAI open-source MoE models, natively supported in vLLM)
+  # ============================================================================
+  gpt-oss-20b:
+    path: openai/gpt-oss-20b
+    type: it
+    tokenizer: openai/gpt-oss-20b
+
+  gpt-oss-120b:
+    path: openai/gpt-oss-120b
+    type: it
+    tokenizer: openai/gpt-oss-120b
+
+  # ============================================================================
+  # DeepSeek-V3 Family (685B MoE, natively supported in vLLM via DeepseekV3ForCausalLM)
+  # ============================================================================
+  deepseek-v3:
+    path: deepseek-ai/DeepSeek-V3
+    type: pt
+    tokenizer: deepseek-ai/DeepSeek-V3
+
+  deepseek-v3-0324:
+    path: deepseek-ai/DeepSeek-V3-0324
+    type: it
+    tokenizer: deepseek-ai/DeepSeek-V3-0324
