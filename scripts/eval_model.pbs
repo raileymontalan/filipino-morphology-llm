@@ -1,0 +1,132 @@
+#!/bin/bash
+# PBS job script for a single model evaluation.
+# Do not run directly — submit via scripts/submit_evaluations.sh.
+#
+# Required PBS variables (pass with qsub -v):
+#   MODEL_NAME   short model key from configs/models_*.yaml  (e.g. qwen-2.5-7b-it)
+#
+# Optional PBS variables:
+#   OVERWRITE    "true" to re-run benchmarks that already have results
+#   MAX_SAMPLES  integer to cap samples per benchmark (default: all)
+#   VLLM_PORT    port for the vLLM server (default: 8000)
+
+#PBS -l walltime=12:00:00
+#PBS -o /scratch_aisg/SPEC-SF-AISG/railey/filipino-morphology-llm/results/logs/
+#PBS -e /scratch_aisg/SPEC-SF-AISG/railey/filipino-morphology-llm/results/logs/
+#PBS -j oe
+#PBS -q AISG_debug
+
+# ── defaults for variables ──────────────────────────────────────────────────
+MODEL_NAME="${MODEL_NAME:-gpt2}"
+OVERWRITE="${OVERWRITE:-false}"
+MAX_SAMPLES="${MAX_SAMPLES:-}"
+# Auto-derive a unique port from the numeric part of PBS_JOBID so concurrent
+# jobs on the same node don't collide.  A user-supplied VLLM_PORT overrides.
+if [[ -z "${VLLM_PORT:-}" ]]; then
+    _JOBNUM="${PBS_JOBID%%.*}"         # e.g. 260439 from 260439.hopper-m-02
+    VLLM_PORT=$(( 8000 + (_JOBNUM % 1000) ))
+fi
+
+set -euo pipefail
+
+PROJECT_ROOT="/scratch_aisg/SPEC-SF-AISG/railey/filipino-morphology-llm"
+cd "$PROJECT_ROOT"
+mkdir -p results/logs
+
+source .env
+source env/bin/activate
+
+# ── UUID → integer GPU remapping (PBS sets UUIDs, vLLM needs integers) ──────
+UUIDS=$(echo "$CUDA_VISIBLE_DEVICES" | tr ',' '\n')
+declare -a VISIBLE_DEVICES=()
+for UUID in $UUIDS; do
+    ID=$(nvidia-smi --id="$UUID" --query-gpu=index --format=csv,noheader 2>/dev/null || echo "$UUID")
+    VISIBLE_DEVICES+=("$ID")
+done
+VISIBLE_DEVICES_STR=$(IFS=,; echo "${VISIBLE_DEVICES[*]}")
+export CUDA_VISIBLE_DEVICES="$VISIBLE_DEVICES_STR"
+N_GPUS=${#VISIBLE_DEVICES[@]}
+echo "CUDA_VISIBLE_DEVICES → $CUDA_VISIBLE_DEVICES  ($N_GPUS GPUs)"
+
+# ── Resolve model path + type from YAML ─────────────────────────────────────
+read -r MODEL_PATH MODEL_TYPE < <(python3 - <<PYEOF
+import yaml, sys
+for cfg in ['configs/models_pt.yaml', 'configs/models_it.yaml']:
+    try:
+        data = yaml.safe_load(open(cfg))
+        info = data['models'].get('${MODEL_NAME}')
+        if info:
+            print(info['path'], info['type'])
+            sys.exit(0)
+    except Exception:
+        pass
+print("UNKNOWN UNKNOWN")
+sys.exit(1)
+PYEOF
+)
+
+if [[ "$MODEL_PATH" == "UNKNOWN" ]]; then
+    echo "ERROR: model '${MODEL_NAME}' not found in any config YAML" >&2
+    exit 1
+fi
+echo "Model path : $MODEL_PATH"
+echo "Model type : $MODEL_TYPE"
+echo "TP size    : $N_GPUS"
+
+# ── Start vLLM server ────────────────────────────────────────────────────────
+VLLM_LOG="${PROJECT_ROOT}/results/logs/vllm_${MODEL_NAME}_$(date +%Y%m%d_%H%M%S).log"
+mkdir -p "$(dirname "$VLLM_LOG")"
+
+echo "Starting vLLM: $MODEL_PATH (TP=$N_GPUS, port=$VLLM_PORT)"
+vllm serve "$MODEL_PATH" \
+    --port "$VLLM_PORT" \
+    --tensor-parallel-size "$N_GPUS" \
+    --enable-prefix-caching \
+    --gpu-memory-utilization 0.85 \
+    --trust-remote-code \
+    > "$VLLM_LOG" 2>&1 &
+VLLM_PID=$!
+
+cleanup() {
+    if [[ -n "${VLLM_PID:-}" ]]; then
+        echo "Stopping vLLM server (PID $VLLM_PID)..."
+        kill "$VLLM_PID" 2>/dev/null || true
+        wait "$VLLM_PID" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT INT TERM
+
+# ── Wait for /health endpoint ────────────────────────────────────────────────
+VLLM_URL="http://localhost:${VLLM_PORT}"
+echo -n "Waiting for vLLM server"
+ELAPSED=0; TIMEOUT=600
+until curl -sf "${VLLM_URL}/health" > /dev/null 2>&1; do
+    sleep 5; ELAPSED=$((ELAPSED + 5))
+    echo -n "."
+    if [[ $ELAPSED -ge $TIMEOUT ]]; then
+        echo " TIMEOUT — see $VLLM_LOG" >&2
+        exit 1
+    fi
+done
+echo " ready (${ELAPSED}s)"
+
+# ── Detect the model ID that vLLM actually registered ────────────────────────
+REGISTERED_MODEL=$(curl -sf "${VLLM_URL}/v1/models" \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
+echo "Registered model ID: $REGISTERED_MODEL"
+
+# ── Build optional flags ─────────────────────────────────────────────────────
+EXTRA_FLAGS=""
+[[ "$OVERWRITE" == "true" ]] && EXTRA_FLAGS="$EXTRA_FLAGS --overwrite"
+[[ -n "$MAX_SAMPLES" ]]      && EXTRA_FLAGS="$EXTRA_FLAGS --max-samples $MAX_SAMPLES"
+
+# ── Run evaluation ────────────────────────────────────────────────────────────
+echo "Running evaluation for $MODEL_NAME..."
+python3 scripts/run_evaluation.py \
+    --models "$MODEL_NAME" \
+    --model-config configs/models_pt.yaml configs/models_it.yaml \
+    --vllm-url "$VLLM_URL" \
+    --vllm-model-id "$REGISTERED_MODEL" \
+    $EXTRA_FLAGS
+
+echo "Done: $MODEL_NAME"
