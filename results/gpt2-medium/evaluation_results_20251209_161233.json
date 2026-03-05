@@ -1,0 +1,47 @@
+{
+  "hf_model_name": "gpt2-medium",
+  "model_type": "pt",
+  "benchmarks": {
+    "pacute": {
+      "accuracy": 0.23080356419086456,
+      "f1_score": 0.37504533910624405,
+      "precision": 0.9999999999998065,
+      "recall": 0.23080357142856112,
+      "path_confidence": 0.24939003586769104,
+      "normalized_accuracy": -0.025595247745513916,
+      "num_options": 4,
+      "num_samples": 2240,
+      "format": "mcq"
+    },
+    "cute": {
+      "num_samples": 1300,
+      "exact_match_accuracy": 0.0,
+      "contains_match_accuracy": 0.20461538461538462,
+      "prefix_match_accuracy": 0.0007692307692307692,
+      "format": "generative"
+    },
+    "hierarchical": {
+      "accuracy": 0.2804674506187439,
+      "f1_score": 0.43807040413777304,
+      "precision": 0.9999999999994048,
+      "recall": 0.280467445742858,
+      "path_confidence": 0.2533379793167114,
+      "normalized_accuracy": 0.04062326749165853,
+      "num_options": 4,
+      "num_samples": 599,
+      "format": "mcq"
+    },
+    "langgame": {
+      "accuracy": 0.25,
+      "f1_score": 0.399999999967936,
+      "precision": 0.9999999999996001,
+      "recall": 0.249999999999975,
+      "path_confidence": 0.25347816944122314,
+      "normalized_accuracy": 0.0,
+      "num_options": 4,
+      "num_samples": 1000,
+      "format": "mcq"
+    }
+  },
+  "timestamp": "20251209_161233"
+}

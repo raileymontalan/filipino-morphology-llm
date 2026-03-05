@@ -1,0 +1,54 @@
+{
+  "hf_model_name": "cerebras/Cerebras-GPT-256M",
+  "model_type": "pt",
+  "benchmarks": {
+    "pacute": {
+      "accuracy": 0.2638392746448517,
+      "f1_score": 0.41752031081115926,
+      "precision": 0.9999999999998307,
+      "recall": 0.26383928571427395,
+      "path_confidence": 0.253324031829834,
+      "normalized_accuracy": 0.01845236619313558,
+      "num_options": 4,
+      "num_samples": 2240,
+      "format": "mcq"
+    },
+    "cute": {
+      "num_samples": 1300,
+      "exact_match_accuracy": 0.0,
+      "contains_match_accuracy": 0.24769230769230768,
+      "prefix_match_accuracy": 0.0007692307692307692,
+      "format": "generative"
+    },
+    "hierarchical": {
+      "accuracy": 0.2754591107368469,
+      "f1_score": 0.4319371727408908,
+      "precision": 0.999999999999394,
+      "recall": 0.2754590984974498,
+      "path_confidence": 0.26345255970954895,
+      "normalized_accuracy": 0.03394548098246256,
+      "num_options": 4,
+      "num_samples": 599,
+      "format": "mcq"
+    },
+    "langgame": {
+      "accuracy": 0.25699999928474426,
+      "f1_score": 0.40891010338824757,
+      "precision": 0.999999999999611,
+      "recall": 0.2569999999999743,
+      "path_confidence": 0.2620229423046112,
+      "normalized_accuracy": 0.009333332379659018,
+      "num_options": 4,
+      "num_samples": 1000,
+      "format": "mcq"
+    },
+    "multi-digit-addition": {
+      "num_samples": 1000,
+      "exact_match_accuracy": 0.0,
+      "contains_match_accuracy": 0.0,
+      "prefix_match_accuracy": 0.0,
+      "format": "generative"
+    }
+  },
+  "timestamp": "20251209_172327"
+}

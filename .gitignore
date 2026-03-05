@@ -117,8 +117,8 @@ run_in_singularity.sh
 nemo_experiments/
 
 # Results - ignore all subfolders and files but keep the results/ directory itself
-results/*/
-results/*.json
+# results/*/
+# results/*.json
 
 # Job scripts with sensitive cluster/path information
 # All actual job files are ignored, use job_templates/ instead

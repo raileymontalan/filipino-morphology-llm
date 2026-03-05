@@ -1,0 +1,54 @@
+{
+  "hf_model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model_type": "it",
+  "benchmarks": {
+    "pacute": {
+      "accuracy": 0.2816964387893677,
+      "f1_score": 0.4395680947061821,
+      "precision": 0.9999999999998415,
+      "recall": 0.28169642857141597,
+      "path_confidence": 0.30186644196510315,
+      "normalized_accuracy": 0.04226191838582357,
+      "num_options": 4,
+      "num_samples": 2240,
+      "format": "mcq"
+    },
+    "cute": {
+      "num_samples": 1300,
+      "exact_match_accuracy": 0.0,
+      "contains_match_accuracy": 0.38846153846153847,
+      "prefix_match_accuracy": 0.0007692307692307692,
+      "format": "generative"
+    },
+    "hierarchical": {
+      "accuracy": 0.2754591107368469,
+      "f1_score": 0.4319371727408908,
+      "precision": 0.999999999999394,
+      "recall": 0.2754590984974498,
+      "path_confidence": 0.2656581699848175,
+      "normalized_accuracy": 0.03394548098246256,
+      "num_options": 4,
+      "num_samples": 599,
+      "format": "mcq"
+    },
+    "langgame": {
+      "accuracy": 0.42500001192092896,
+      "f1_score": 0.5964912280282326,
+      "precision": 0.9999999999997647,
+      "recall": 0.42499999999995747,
+      "path_confidence": 0.3957037031650543,
+      "normalized_accuracy": 0.23333334922790527,
+      "num_options": 4,
+      "num_samples": 1000,
+      "format": "mcq"
+    },
+    "multi-digit-addition": {
+      "num_samples": 1000,
+      "exact_match_accuracy": 0.0,
+      "contains_match_accuracy": 0.624,
+      "prefix_match_accuracy": 0.0,
+      "format": "generative"
+    }
+  },
+  "timestamp": "20251209_172327"
+}

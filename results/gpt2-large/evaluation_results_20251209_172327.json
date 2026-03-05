@@ -1,0 +1,54 @@
+{
+  "hf_model_name": "gpt2-large",
+  "model_type": "pt",
+  "benchmarks": {
+    "pacute": {
+      "accuracy": 0.23571428656578064,
+      "f1_score": 0.38150289014250977,
+      "precision": 0.9999999999998105,
+      "recall": 0.2357142857142752,
+      "path_confidence": 0.25297218561172485,
+      "normalized_accuracy": -0.01904761791229248,
+      "num_options": 4,
+      "num_samples": 2240,
+      "format": "mcq"
+    },
+    "cute": {
+      "num_samples": 1300,
+      "exact_match_accuracy": 0.0,
+      "contains_match_accuracy": 0.3030769230769231,
+      "prefix_match_accuracy": 0.0007692307692307692,
+      "format": "generative"
+    },
+    "hierarchical": {
+      "accuracy": 0.27879798412323,
+      "f1_score": 0.43603133155847845,
+      "precision": 0.9999999999994013,
+      "recall": 0.27879799666105526,
+      "path_confidence": 0.25381219387054443,
+      "normalized_accuracy": 0.03839731216430664,
+      "num_options": 4,
+      "num_samples": 599,
+      "format": "mcq"
+    },
+    "langgame": {
+      "accuracy": 0.25099998712539673,
+      "f1_score": 0.40127897678640434,
+      "precision": 0.9999999999996017,
+      "recall": 0.2509999999999749,
+      "path_confidence": 0.2514197528362274,
+      "normalized_accuracy": 0.001333316167195638,
+      "num_options": 4,
+      "num_samples": 1000,
+      "format": "mcq"
+    },
+    "multi-digit-addition": {
+      "num_samples": 1000,
+      "exact_match_accuracy": 0.0,
+      "contains_match_accuracy": 0.0,
+      "prefix_match_accuracy": 0.0,
+      "format": "generative"
+    }
+  },
+  "timestamp": "20251209_172327"
+}

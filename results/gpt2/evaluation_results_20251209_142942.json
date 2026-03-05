@@ -1,0 +1,18 @@
+{
+  "hf_model_name": "gpt2",
+  "model_type": "pt",
+  "benchmarks": {
+    "pacute": {
+      "accuracy": 0.5,
+      "f1_score": 0.6666666666133333,
+      "precision": 0.99999999998,
+      "recall": 0.499999999995,
+      "path_confidence": 0.4778195023536682,
+      "normalized_accuracy": 0.3333333333333333,
+      "num_options": 4,
+      "num_samples": 10,
+      "format": "mcq"
+    }
+  },
+  "timestamp": "20251209_142942"
+}
