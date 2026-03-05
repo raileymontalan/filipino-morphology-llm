@@ -196,8 +196,8 @@ def create_mcq_deletion(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted MCQ prompts and options
     """
-    text_en = 'Which option correctly removes every "{char_to_delete}" in "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang nagtatanggal ng bawat "{char_to_delete}" sa "{normalized_word}"?'
+    text_en = 'Which option correctly removes every character "{char_to_delete}" in the word "{normalized_word}"?'
+    text_tl = 'Alin sa sumusunod ang nagtatanggal ng lahat ng titik na "{char_to_delete}" mula sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     char_to_delete = get_random_char(string)
@@ -216,8 +216,8 @@ def create_mcq_deletion(row: pd.Series) -> Dict[str, Any]:
 
 
 def create_mcq_insertion(row):
-    text_en = 'Which option correctly puts "{char_to_insert}" after every "{preceding_char}" in "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang naglalagay ng "{char_to_insert}" pagkatapos ng bawat "{preceding_char}" sa "{normalized_word}"?'
+    text_en = 'Which option correctly puts the character "{char_to_insert}" after every character "{preceding_char}" in the word "{normalized_word}"?'
+    text_tl = 'Alin sa sumusunod ang naglalagay ng titik na "{char_to_insert}" pagkatapos ng bawat titik na "{preceding_char}" sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     preceding_char = get_random_char(string)
@@ -238,8 +238,8 @@ def create_mcq_insertion(row):
 
 
 def create_mcq_substitution(row):
-    text_en = 'Which option correctly replaces every "{char_to_replace}" with "{char_to_substitute}" in "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang pumapalit sa bawat "{char_to_replace}" gamit ng "{char_to_substitute}" sa "{normalized_word}"?'
+    text_en = 'Which option correctly replaces every character "{char_to_replace}" with the character "{char_to_substitute}" in the word "{normalized_word}"?'
+    text_tl = 'Alin sa sumusunod ang pumapalit sa bawat titik na "{char_to_replace}" gamit ang titik na "{char_to_substitute}" sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     char_to_replace = get_random_char(string)
@@ -261,8 +261,8 @@ def create_mcq_substitution(row):
 
 
 def create_mcq_permutation(row):
-    text_en = 'Which option correctly swaps every "{char1}" with "{char2}" and vice versa in "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang pumapalit sa bawat "{char1}" gamit ng "{char2}" at ang kabaligtarang din nito sa "{normalized_word}"?'
+    text_en = 'Which option correctly swaps every character "{char1}" and character "{char2}" in the word "{normalized_word}"?'
+    text_tl = 'Alin sa sumusunod ang pinagpapalit ang bawat titik na "{char1}" at titik na "{char2}" sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     char1 = get_random_char(string)
@@ -284,8 +284,8 @@ def create_mcq_permutation(row):
 
 
 def create_mcq_duplication(row):
-    text_en = 'Which option correctly duplicates every "{char_to_duplicate}" once in "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang umuulit sa bawat "{char_to_duplicate}" nang isang beses sa "{normalized_word}"?'
+    text_en = 'Which option correctly duplicates every character "{char_to_duplicate}" once in the word "{normalized_word}"?'
+    text_tl = 'Alin sa sumusunod ang inuulit ang bawat titik na "{char_to_duplicate}" nang isang beses sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     char_to_duplicate = get_random_char(string)
@@ -305,8 +305,8 @@ def create_mcq_duplication(row):
 
 
 def create_mcq_uppercasing(row):
-    text_en = 'Which option correctly changes "{normalized_word}" to all uppercase?'
-    text_tl = 'Alin sa sumusunod ang ginagawang malaki ang lahat ng titik sa "{normalized_word}"?'
+    text_en = 'Which option correctly changes the word "{normalized_word}" to all uppercase?'
+    text_tl = 'Alin sa sumusunod ang ginagawang malaki ang lahat ng titik sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     mcq_correct = string.upper()
@@ -323,8 +323,8 @@ def create_mcq_uppercasing(row):
 
 
 def create_mcq_lowercasing(row):
-    text_en = 'Which option correctly changes "{normalized_word}" to all lowercase?'
-    text_tl = 'Alin sa sumusunod ang ginagawang maliit ang lahat ng titik sa "{normalized_word}"?'
+    text_en = 'Which option correctly changes the word "{normalized_word}" to all lowercase?'
+    text_tl = 'Alin sa sumusunod ang ginagawang maliit ang lahat ng titik sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     mcq_correct = string.lower()
@@ -341,8 +341,8 @@ def create_mcq_lowercasing(row):
 
 
 def create_mcq_diacritic_normalization(row):
-    text_en = 'Which option correctly normalizes diacritics from "{word}"?'
-    text_tl = 'Alin sa sumusunod ang nagtatanggal ng mga tuldik sa "{word}"?'
+    text_en = 'Which option correctly normalizes diacritics from the word "{word}"?'
+    text_tl = 'Alin sa sumusunod ang nagtatanggal ng mga tuldik sa salitang "{word}"?'
 
     string = row['word']
     mcq_correct = normalize_diacritic(string)
@@ -372,8 +372,8 @@ def create_gen_deletion(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted generative prompts and label
     """
-    text_en = 'Remove every "{char_to_delete}" in "{normalized_word}".'
-    text_tl = 'Tanggalin ang bawat "{char_to_delete}" sa "{normalized_word}".'
+    text_en = 'Remove every character "{char_to_delete}" in the word "{normalized_word}".'
+    text_tl = 'Tanggalin ang bawat titik na "{char_to_delete}" sa salitang "{normalized_word}".'
 
     string = row['normalized_word']
     char_to_delete = get_random_char(string)
@@ -384,8 +384,8 @@ def create_gen_deletion(row: pd.Series) -> Dict[str, Any]:
 
 
 def create_gen_insertion(row):
-    text_en = 'Put a "{char_to_insert}" after every "{preceding_char}" in "{normalized_word}"'
-    text_tl = 'Maglagay ng "{char_to_insert}" pagkatapos ng bawat "{preceding_char}" sa "{normalized_word}"'
+    text_en = 'Put a character "{char_to_insert}" after every character "{preceding_char}" in the word "{normalized_word}".'
+    text_tl = 'Maglagay ng titik na "{char_to_insert}" pagkatapos ng bawat titik na "{preceding_char}" sa salitang "{normalized_word}".'
 
     string = row['normalized_word']
     preceding_char = get_random_char(string)
@@ -398,8 +398,8 @@ def create_gen_insertion(row):
 
 
 def create_gen_substitution(row):
-    text_en = 'Replace every "{char_to_replace}" with "{char_to_substitute}" in "{normalized_word}".'
-    text_tl = 'Palitan ang bawat "{char_to_replace}" gamit ng "{char_to_substitute}" sa "{normalized_word}".'
+    text_en = 'Replace every character "{char_to_replace}" with the character "{char_to_substitute}" in the word "{normalized_word}".'
+    text_tl = 'Palitan ang bawat titik na "{char_to_replace}" gamit ng titik na "{char_to_substitute}" sa salitang "{normalized_word}".'
 
     string = row['normalized_word']
     char_to_replace = get_random_char(string)
@@ -413,8 +413,8 @@ def create_gen_substitution(row):
 
 
 def create_gen_permutation(row):
-    text_en = 'Swap every "{char1}" with "{char2}" in "{normalized_word}".'
-    text_tl = 'Palitan ang bawat "{char1}" gamit ng "{char2}" at ang kabaligtarang din nito sa "{normalized_word}".'
+    text_en = 'Swap every character "{char1}" with the character "{char2}" in the word "{normalized_word}".'
+    text_tl = 'Palitan ang bawat titik na "{char1}" gamit ng titik na "{char2}" at ang kabaligtarang din nito sa salitang "{normalized_word}".'
 
     string = row['normalized_word']
     char1 = get_random_char(string)
@@ -428,8 +428,8 @@ def create_gen_permutation(row):
 
 
 def create_gen_duplication(row):
-    text_en = 'Duplicate every "{char_to_duplicate}" once in "{normalized_word}".'
-    text_tl = 'Ulitin ang bawat "{char_to_duplicate}" nang isang beses sa "{normalized_word}".'
+    text_en = 'Duplicate every character "{char_to_duplicate}" once in the word "{normalized_word}".'
+    text_tl = 'Ulitin ang bawat titik na "{char_to_duplicate}" nang isang beses sa salitang "{normalized_word}".'
 
     string = row['normalized_word']
     char_to_duplicate = get_random_char(string)
@@ -441,8 +441,8 @@ def create_gen_duplication(row):
 
 
 def create_gen_uppercasing(row):
-    text_en = 'Change "{normalized_word}" into uppercase.'
-    text_tl = 'Gawing malaki ang lahat ng titik sa "{normalized_word}".'
+    text_en = 'Change the word "{normalized_word}" into uppercase.'
+    text_tl = 'Gawing malaki ang lahat ng titik sa salitang "{normalized_word}".'
 
     label = row["normalized_word"].upper()
     outputs = prepare_gen_outputs(text_en, text_tl, str(label), row=row, kwargs={})
@@ -450,8 +450,8 @@ def create_gen_uppercasing(row):
 
 
 def create_gen_lowercasing(row):
-    text_en = 'Change "{normalized_word}" into lowercase.'
-    text_tl = 'Gawing maliit ang lahat ng titik sa "{normalized_word}".'
+    text_en = 'Change the word "{normalized_word}" into lowercase.'
+    text_tl = 'Gawing maliit ang lahat ng titik sa salitang "{normalized_word}".'
 
     label = row["normalized_word"].lower()
     outputs = prepare_gen_outputs(text_en, text_tl, str(label), row=row, kwargs={})
@@ -459,8 +459,8 @@ def create_gen_lowercasing(row):
 
 
 def create_gen_diacritic_normalization(row):
-    text_en = 'Normalize the diacritics from "{word}".'
-    text_tl = 'Tanggalin ang lahat ng mga tuldik sa "{word}".'
+    text_en = 'Normalize the diacritics from the word "{word}".'
+    text_tl = 'Tanggalin ang lahat ng mga tuldik sa salitang "{word}".'
 
     label = normalize_diacritic(row["word"])
     outputs = prepare_gen_outputs(text_en, text_tl, str(label), row=row, kwargs={})

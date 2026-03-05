@@ -141,8 +141,8 @@ class HierarchicalTaskGenerator:
             position = random.randint(1, len(word))
             answer = word[position - 1]
 
-            prompt_en = f"What is the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character in '{word}'?"
-            prompt_tl = f"Ano ang ika-{position} karakter sa salitang '{word}'?"
+            prompt_en = f"What is the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character in the word '{word}'?"
+            prompt_tl = f"Ano ang ika-{position} na titik sa salitang '{word}'?"
 
             if format == "mcq":
                 # Generate distractors: other characters from the word
@@ -190,8 +190,8 @@ class HierarchicalTaskGenerator:
             count = char_counts[char]
             answer = str(count)
 
-            prompt_en = f"How many '{char}' characters are in '{word}'?"
-            prompt_tl = f"Ilang '{char}' ang nasa salitang '{word}'?"
+            prompt_en = f"How many '{char}' characters are in the word '{word}'?"
+            prompt_tl = f"Ilang titik na '{char}' ang nasa salitang '{word}'?"
 
             if format == "mcq":
                 # Generate distractors: count ± 1, count ± 2
@@ -246,8 +246,8 @@ class HierarchicalTaskGenerator:
                 answer = "No"
                 answer_tl = "Hindi"
 
-            prompt_en = f"Does '{word}' contain the character '{char}'?"
-            prompt_tl = f"May '{char}' ba sa salitang '{word}'?"
+            prompt_en = f"Does the word '{word}' contain the character '{char}'?"
+            prompt_tl = f"May titik na '{char}' ba sa salitang '{word}'?"
 
             if format == "mcq":
                 options = ["Yes", "No"]
@@ -294,7 +294,7 @@ class HierarchicalTaskGenerator:
             answer = delete_character(word, position)
 
             prompt_en = f"Delete the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character from '{word}'."
-            prompt_tl = f"Tanggalin ang ika-{position} karakter mula sa salitang '{word}'."
+            prompt_tl = f"Tanggalin ang ika-{position} na titik mula sa salitang '{word}'."
 
             if format == "mcq":
                 # Generate distractors: delete different positions
@@ -337,8 +337,8 @@ class HierarchicalTaskGenerator:
             char_to_insert = random.choice("abcdefghilmnoprstuy")
             answer = insert_character(word, position, char_to_insert)
 
-            prompt_en = f"Insert '{char_to_insert}' at position {position} in '{word}'."
-            prompt_tl = f"Isingit ang '{char_to_insert}' sa ika-{position} posisyon sa salitang '{word}'."
+            prompt_en = f"Insert '{char_to_insert}' at position {position} in the word'{word}'."
+            prompt_tl = f"Ilagay ang titik na '{char_to_insert}' sa ika-{position} na posisyon sa salitang '{word}'."
 
             if format == "mcq":
                 # Generate distractors: insert at different positions
@@ -385,8 +385,8 @@ class HierarchicalTaskGenerator:
             new_char = random.choice([c for c in "abcdefghilmnoprstuy" if c != old_char])
             answer = substitute_character(word, position, new_char)
 
-            prompt_en = f"Replace the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character in '{word}' with '{new_char}'."
-            prompt_tl = f"Palitan ang ika-{position} karakter sa salitang '{word}' ng '{new_char}'."
+            prompt_en = f"Replace the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} character in the word '{word}' with the character '{new_char}'."
+            prompt_tl = f"Palitan ang ika-{position} na titik sa salitang '{word}' gamit ng titik na '{new_char}'."
 
             if format == "mcq":
                 # Generate distractors: substitute at different positions or with different chars
@@ -439,8 +439,8 @@ class HierarchicalTaskGenerator:
 
             answer = permute_characters(word, pos1, pos2)
 
-            prompt_en = f"Swap characters at positions {pos1} and {pos2} in '{word}'."
-            prompt_tl = f"Palitan ang mga karakter sa posisyon {pos1} at {pos2} sa salitang '{word}'."
+            prompt_en = f"Swap characters at positions {pos1} and {pos2} in the word '{word}'."
+            prompt_tl = f"Ipagpalit ang mga titik sa posisyon {pos1} at {pos2} sa salitang '{word}'."
 
             if format == "mcq":
                 # Generate distractors: swap different positions
@@ -506,7 +506,7 @@ class HierarchicalTaskGenerator:
             affix_type, affix = random.choice(affix_types)
             answer = affix
 
-            prompt_en = f"What is the {affix_type} in '{word}'?"
+            prompt_en = f"What is the {affix_type} in the word'{word}'?"
             prompt_tl = f"Ano ang {affix_type} sa salitang '{word}'?"
 
             if format == "mcq":
@@ -555,8 +555,8 @@ class HierarchicalTaskGenerator:
             word = row["word"]
             answer = row["root"]
 
-            prompt_en = f"What is the root word of '{word}'?"
-            prompt_tl = f"Ano ang salitang-ugat ng '{word}'?"
+            prompt_en = f"What is the root word of the word '{word}'?"
+            prompt_tl = f"Ano ang salitang-ugat ng salitang '{word}'?"
 
             if format == "mcq":
                 # Generate distractors: roots of other words
@@ -602,7 +602,7 @@ class HierarchicalTaskGenerator:
             count = len(syllables)
             answer = str(count)
 
-            prompt_en = f"How many syllables are in '{word}'?"
+            prompt_en = f"How many syllables are in the word '{word}'?"
             prompt_tl = f"Ilang pantig ang nasa salitang '{word}'?"
 
             if format == "mcq":
@@ -678,7 +678,7 @@ class HierarchicalTaskGenerator:
             # to compute result of removing specific affix
             answer = root
 
-            prompt_en = f"Remove the {affix_type} from '{word}'."
+            prompt_en = f"Remove the {affix_type} from the word '{word}'."
             prompt_tl = f"Tanggalin ang {affix_type} mula sa salitang '{word}'."
 
             if format == "mcq":
@@ -746,7 +746,7 @@ class HierarchicalTaskGenerator:
             affix_type, affix = random.choice(affix_types)
             answer = word
 
-            prompt_en = f"Add {affix_type} '{affix}' to the root '{root}'."
+            prompt_en = f"Add {affix_type} '{affix}' to the root word '{root}'."
             prompt_tl = f"Ikabit ang {affix_type} na '{affix}' sa salitang-ugat na '{root}'."
 
             if format == "mcq":
@@ -822,8 +822,8 @@ class HierarchicalTaskGenerator:
             else:  # suffix
                 answer = root1 + affix
 
-            prompt_en = f"Extract the root from '{word1}', then add {affix_type} '{affix}'."
-            prompt_tl = f"Kunin ang ugat mula sa '{word1}', pagkatapos ay ikabit ang {affix_type} na '{affix}'."
+            prompt_en = f"Extract the root from the word '{word1}', then add {affix_type} '{affix}'."
+            prompt_tl = f"Kunin ang ugat mula sa salitang '{word1}', pagkatapos ay ikabit ang {affix_type} na '{affix}'."
 
             if format == "mcq":
                 # Generate distractors

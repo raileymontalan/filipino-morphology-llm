@@ -7,7 +7,11 @@ detection, and syllable counting with 'ng' digraph awareness. Supports both
 multiple-choice questions (MCQ) and generative (GEN) formats.
 """
 
+import csv
+import glob
+import os
 import random
+import re
 from typing import Dict, List, Any, Optional
 import pandas as pd
 
@@ -20,6 +24,221 @@ from ...utils.constants import (
     STRESS_PRONUNCIATION_MAP
 )
 from ...utils.helpers import prepare_mcq_outputs, prepare_gen_outputs
+
+# Accented vowel characters used to detect stressed syllables
+_ACCENT_CHARS: set = set('áàâéèêíìîóòôúùû')
+
+
+# ============================================================================
+# CSV-Based Stress Data Loading
+# ============================================================================
+
+
+def load_stress_csv_data(csv_dir: str) -> List[Dict[str, Any]]:
+    """
+    Load all stress CSV files from the pacute_data directory.
+
+    Each CSV has:
+      - header row: col0='Sentence', col1='word - [0: form0, 1: form1, ...]'
+      - data rows:  col0=Filipino sentence, col1=correct option index (int),
+                   col3=English translation
+
+    Returns a flat list of dicts with keys:
+      word, options (dict int->accented form), filipino_sentence,
+      english_sentence, correct_idx
+    """
+    rows: List[Dict[str, Any]] = []
+    pattern = os.path.join(csv_dir, '*_sentences.csv')
+    csv_files = sorted(glob.glob(pattern))
+
+    for filepath in csv_files:
+        with open(filepath, encoding='utf-8') as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            data_rows = list(reader)
+
+        if len(header) < 2:
+            continue
+
+        header_cell = header[1]
+        # Parse: "word - [0: 'form0', 1: 'form1']"
+        if ' - ' not in header_cell:
+            continue
+        word = header_cell.split(' - ')[0].strip()
+        opts_str = header_cell.split(' - ', 1)[1].strip()
+        options: Dict[int, str] = {
+            int(k): v
+            for k, v in re.findall(r"(\d+):\s*'([^']+)'", opts_str)
+        }
+        if not options:
+            continue
+
+        for row in data_rows:
+            if not row or not row[0].strip():
+                continue
+            try:
+                correct_idx = int(row[1].strip())
+            except (ValueError, IndexError):
+                continue
+            if correct_idx not in options:
+                continue
+            rows.append({
+                'word': word,
+                'options': options,
+                'filipino_sentence': row[0].strip(),
+                'english_sentence': row[3].strip() if len(row) > 3 else '',
+                'correct_idx': correct_idx,
+            })
+
+    return rows
+
+
+def _find_stressed_syllable(accented_word: str, syllables: List[str]) -> Optional[str]:
+    """Return the syllable that contains an accented vowel."""
+    pos = 0
+    for syll in syllables:
+        piece = accented_word[pos: pos + len(syll)]
+        if any(c in _ACCENT_CHARS for c in piece):
+            return syll
+        pos += len(syll)
+    return None
+
+
+def _pad_mcq_options(correct: str, others: List[str], pad: str = '-') -> Dict[str, str]:
+    """Build the mcq_options dict, padding to 3 incorrect entries."""
+    padded = (others + [pad, pad, pad])[:3]
+    return {
+        'correct': correct,
+        'incorrect1': padded[0],
+        'incorrect2': padded[1],
+        'incorrect3': padded[2],
+    }
+
+
+# ============================================================================
+# Task Creation Functions - Stress Identification (CSV-based)
+# ============================================================================
+
+
+def create_mcq_stress_identification(
+    row_data: Dict[str, Any],
+    syllables: List[str],
+) -> Optional[Dict[str, Any]]:
+    """
+    MCQ: Which syllable in the word has the stress, given the sentence context?
+
+    Only two options are provided (the correct stressed syllable and one other).
+    """
+    text_en = (
+        'Which syllable in the word "{word}" has the stress based on '
+        'the sentence "{filipino_sentence}"?'
+    )
+    text_tl = (
+        'Aling pantig sa salitang "{word}" ang may diin ayon sa '
+        'pangungusap na "{filipino_sentence}"?'
+    )
+
+    correct_form = row_data['options'].get(row_data['correct_idx'])
+    if not correct_form or not syllables:
+        return None
+
+    stressed = _find_stressed_syllable(correct_form, syllables)
+    if stressed is None:
+        return None
+
+    others = [s for s in syllables if s != stressed]
+    incorrect = others[0] if others else stressed  # fallback: shouldn't happen
+    mcq_options = {'correct': stressed, 'incorrect1': incorrect}
+    fmt_row = {'word': row_data['word'], 'filipino_sentence': row_data['filipino_sentence']}
+    return prepare_mcq_outputs(text_en, text_tl, mcq_options, row=fmt_row)
+
+
+def create_gen_stress_identification(
+    row_data: Dict[str, Any],
+    syllables: List[str],
+) -> Optional[Dict[str, Any]]:
+    """
+    GEN: Which syllable in the word has the stress, given the sentence context?
+    """
+    text_en = (
+        'Based on the sentence "{filipino_sentence}", which syllable of '
+        'the word "{word}" has the stress?'
+    )
+    text_tl = (
+        'Ayon sa pangungusap na "{filipino_sentence}", aling pantig sa '
+        'salitang "{word}" ang may diin?'
+    )
+
+    correct_form = row_data['options'].get(row_data['correct_idx'])
+    if not correct_form or not syllables:
+        return None
+
+    stressed = _find_stressed_syllable(correct_form, syllables)
+    if stressed is None:
+        return None
+
+    fmt_row = {'word': row_data['word'], 'filipino_sentence': row_data['filipino_sentence']}
+    return prepare_gen_outputs(text_en, text_tl, stressed, row=fmt_row)
+
+
+# ============================================================================
+# Task Creation Functions - Stress Disambiguation (CSV-based)
+# ============================================================================
+
+
+def create_mcq_stress_disambiguation(
+    row_data: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """
+    MCQ: How should the word be written with the correct diacritic marks,
+    given the sentence context?
+
+    Options are all accented forms from the CSV header.
+    """
+    text_en = (
+        'How should the word "{word}" be written with the correct diacritic '
+        'marks in the sentence "{filipino_sentence}"?'
+    )
+    text_tl = (
+        'Paano dapat isulat ang salitang "{word}" na may tamang tuldik sa '
+        'pangungusap na "{filipino_sentence}"?'
+    )
+
+    options_dict = row_data['options']
+    correct_form = options_dict.get(row_data['correct_idx'])
+    if not correct_form:
+        return None
+
+    others = [v for k, v in sorted(options_dict.items()) if k != row_data['correct_idx']]
+    # Pad with the bare (unaccented) word form when there are fewer than 3 distractors
+    mcq_options = _pad_mcq_options(correct_form, others, pad=row_data['word'])
+    fmt_row = {'word': row_data['word'], 'filipino_sentence': row_data['filipino_sentence']}
+    return prepare_mcq_outputs(text_en, text_tl, mcq_options, row=fmt_row)
+
+
+def create_gen_stress_disambiguation(
+    row_data: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """
+    GEN: How should the word be written with the correct diacritic marks,
+    given the sentence context?
+    """
+    text_en = (
+        'Based on the sentence "{filipino_sentence}", how should the word '
+        '"{word}" be written with the correct diacritic marks?'
+    )
+    text_tl = (
+        'Ayon sa pangungusap na "{filipino_sentence}", paano dapat isulat '
+        'salitang "{word}" na may tamang tuldik?'
+    )
+
+    correct_form = row_data['options'].get(row_data['correct_idx'])
+    if not correct_form:
+        return None
+
+    fmt_row = {'word': row_data['word'], 'filipino_sentence': row_data['filipino_sentence']}
+    return prepare_gen_outputs(text_en, text_tl, correct_form, row=fmt_row)
+
 
 # ============================================================================
 # Helper Functions
@@ -283,8 +502,8 @@ def create_mcq_ng_syllable_count(row: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary with formatted MCQ prompts and options
     """
-    text_en = 'How many syllables in "{normalized_word}"?'
-    text_tl = 'Ilang pantig ang "{normalized_word}"?'
+    text_en = 'How many syllables are in the word "{normalized_word}"?'
+    text_tl = 'Ilan ang pantig sa salitang "{normalized_word}"?'
 
     correct_count = len(row['normalized_syllable_list'])
 
@@ -311,8 +530,8 @@ def create_gen_ng_syllable_count(row: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary with formatted prompts and label (syllable count as string)
     """
-    text_en = 'How many syllables in "{normalized_word}"?'
-    text_tl = 'Ilang pantig ang "{normalized_word}"?'
+    text_en = 'How many syllables are in the word "{normalized_word}"?'
+    text_tl = 'Ilan ang pantig sa salitang "{normalized_word}"?'
 
     correct_count = len(row['normalized_syllable_list'])
     label = str(correct_count)
@@ -338,8 +557,8 @@ def create_mcq_general_syllable_count(row: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary with formatted MCQ prompts and options
     """
-    text_en = 'How many syllables in "{normalized_word}"?'
-    text_tl = 'Ilang pantig ang "{normalized_word}"?'
+    text_en = 'How many syllables are in the word "{normalized_word}"?'
+    text_tl = 'Ilan ang pantig sa salitang "{normalized_word}"?'
 
     correct_count = len(row['normalized_syllable_list'])
 
@@ -365,8 +584,8 @@ def create_gen_general_syllable_count(row: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary with formatted prompts and label (syllable count as string)
     """
-    text_en = 'How many syllables in "{normalized_word}"?'
-    text_tl = 'Ilang pantig ang "{normalized_word}"?'
+    text_en = 'How many syllables are in the word "{normalized_word}"?'
+    text_tl = 'Ilan ang pantig sa salitang "{normalized_word}"?'
 
     correct_count = len(row['normalized_syllable_list'])
     label = str(correct_count)
@@ -421,19 +640,15 @@ def _shuffle_mcq_options(dataset: pd.DataFrame, random_seed: int) -> pd.DataFram
     """
     Shuffle MCQ options and assign labels (A, B, C, D) to the dataset.
     
-    Takes MCQ options from the 'mcq_options' field, randomly shuffles them,
-    and assigns the correct label based on where the correct answer ends up.
-    
-    Args:
-        dataset: DataFrame with MCQ prompts containing 'mcq_options' field
-        random_seed: Random seed for reproducibility
-    
-    Returns:
-        DataFrame with shuffled options and assigned labels
+    Rows that already have a label assigned (e.g. 2-option stress_identification
+    rows shuffled inline) are skipped.
     """
     random.seed(random_seed)
-    
+
     for i in range(len(dataset)):
+        # Skip rows that were already labelled inline (e.g. 2-option tasks)
+        if dataset.at[i, 'label'] is not None and dataset.at[i, 'label'] != '':
+            continue
         label_index = i % NUM_MCQ_OPTIONS
         correct = dataset.iloc[i]['prompts'][0]["mcq_options"]['correct']
         options = [
@@ -452,7 +667,7 @@ def _shuffle_mcq_options(dataset: pd.DataFrame, random_seed: int) -> pd.DataFram
         label = MCQ_LABEL_MAP[label_index]
         dataset.at[i, 'prompts'][0].update(choices)
         dataset.at[i, 'label'] = label
-    
+
     return dataset
 
 
@@ -465,7 +680,8 @@ def create_syllabification_dataset(
     num_samples: int,
     mode: str = 'mcq',
     random_seed: int = 100,
-    freq_weight: float = 0.0
+    freq_weight: float = 0.0,
+    csv_dir: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Create a complete syllabification dataset with various Filipino linguistic tasks.
@@ -518,16 +734,61 @@ def create_syllabification_dataset(
     # Filter for words containing 'ng' for ng-awareness tasks
     syllables_with_ng = syllables_df[syllables_df['normalized_word'].str.contains('ng', na=False)]
 
+    # Build word -> syllables lookup from syllables_df
+    syllables_map: Dict[str, List[str]] = {}
+    for _, _row in syllables_df.iterrows():
+        _w = _row['normalized_word'].lower()
+        if _w not in syllables_map:
+            syllables_map[_w] = list(_row['normalized_syllable_list'])
+
+    # Load CSV-based stress data
+    stress_csv_rows: List[Dict[str, Any]] = []
+    if csv_dir:
+        stress_csv_rows = load_stress_csv_data(csv_dir)
+        print(f"Loaded {len(stress_csv_rows)} rows from stress CSV files in {csv_dir}")
+    else:
+        print("Warning: csv_dir not provided — stress tasks will be skipped.")
+
     if mode == 'mcq':
-        # Stress classification tasks - use frequency-weighted samples
-        sample_rows = syllables_df.head(num_samples) if freq_weight > 0 else syllables_df.sample(num_samples, random_state=random_seed)
-        for _, row in sample_rows.iterrows():
-            mcq_row = create_mcq_stress_classification(row)
-            dataset = pd.concat([dataset, pd.DataFrame({
-                "category": ["syllabification"],
-                "subcategory": ["stress_classification"],
-                "prompts": [mcq_row["prompts"]],
-            })], ignore_index=True)
+        # Stress identification tasks (CSV-based, context-dependent) — 2-option MCQ
+        if stress_csv_rows:
+            random.seed(random_seed)
+            sampled_ident = random.sample(stress_csv_rows, min(num_samples, len(stress_csv_rows)))
+            for row_data in sampled_ident:
+                syls = syllables_map.get(row_data['word'])
+                if not syls:
+                    continue
+                mcq_row = create_mcq_stress_identification(row_data, syls)
+                if not mcq_row:
+                    continue
+                # Shuffle 2 options inline and assign label (A or B)
+                opts = mcq_row['prompts'][0]['mcq_options']
+                correct, incorrect = opts['correct'], opts['incorrect1']
+                if random.random() < 0.5:
+                    choices = {'choice1': correct, 'choice2': incorrect}
+                    label = 'A'
+                else:
+                    choices = {'choice1': incorrect, 'choice2': correct}
+                    label = 'B'
+                mcq_row['prompts'][0].update(choices)
+                dataset = pd.concat([dataset, pd.DataFrame({
+                    "category": ["syllabification"],
+                    "subcategory": ["stress_identification"],
+                    "prompts": [mcq_row["prompts"]],
+                    "label": [label],
+                })], ignore_index=True)
+
+            # Stress disambiguation tasks (different random sample)
+            random.seed(random_seed + 1)
+            sampled_disamb = random.sample(stress_csv_rows, min(num_samples, len(stress_csv_rows)))
+            for row_data in sampled_disamb:
+                mcq_row = create_mcq_stress_disambiguation(row_data)
+                if mcq_row:
+                    dataset = pd.concat([dataset, pd.DataFrame({
+                        "category": ["syllabification"],
+                        "subcategory": ["stress_disambiguation"],
+                        "prompts": [mcq_row["prompts"]],
+                    })], ignore_index=True)
 
         # Reduplication detection tasks - use frequency-ordered data if weighted
         if freq_weight > 0:
@@ -595,16 +856,35 @@ def create_syllabification_dataset(
         dataset = _shuffle_mcq_options(dataset, random_seed)
 
     elif mode == 'gen':
-        # Stress classification tasks (GEN)
-        sample_rows = syllables_df.head(num_samples) if freq_weight > 0 else syllables_df.sample(num_samples, random_state=random_seed)
-        for _, row in sample_rows.iterrows():
-            gen_row = create_gen_stress_classification(row)
-            dataset = pd.concat([dataset, pd.DataFrame({
-                "category": ["syllabification"],
-                "subcategory": ["stress_classification"],
-                "prompts": [gen_row["prompts"]],
-                "label": [gen_row["label"]],
-            })], ignore_index=True)
+        # Stress identification tasks — GEN (CSV-based, context-dependent)
+        if stress_csv_rows:
+            random.seed(random_seed)
+            sampled_ident = random.sample(stress_csv_rows, min(num_samples, len(stress_csv_rows)))
+            for row_data in sampled_ident:
+                syls = syllables_map.get(row_data['word'])
+                if not syls:
+                    continue
+                gen_row = create_gen_stress_identification(row_data, syls)
+                if gen_row:
+                    dataset = pd.concat([dataset, pd.DataFrame({
+                        "category": ["syllabification"],
+                        "subcategory": ["stress_identification"],
+                        "prompts": [gen_row["prompts"]],
+                        "label": [gen_row["label"]],
+                    })], ignore_index=True)
+
+            # Stress disambiguation tasks — GEN
+            random.seed(random_seed + 1)
+            sampled_disamb = random.sample(stress_csv_rows, min(num_samples, len(stress_csv_rows)))
+            for row_data in sampled_disamb:
+                gen_row = create_gen_stress_disambiguation(row_data)
+                if gen_row:
+                    dataset = pd.concat([dataset, pd.DataFrame({
+                        "category": ["syllabification"],
+                        "subcategory": ["stress_disambiguation"],
+                        "prompts": [gen_row["prompts"]],
+                        "label": [gen_row["label"]],
+                    })], ignore_index=True)
 
         # Reduplication identification tasks (GEN) - use frequency-ordered data if weighted
         if freq_weight > 0:

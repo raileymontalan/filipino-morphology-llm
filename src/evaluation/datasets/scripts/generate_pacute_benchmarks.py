@@ -165,12 +165,15 @@ def generate_syllabification_benchmarks(output_dir: str, num_samples: int = 100,
     
     syllables = pd.read_json(syllables_path, lines=True)
     print(f"Loaded {len(syllables)} syllabified words")
+
+    csv_dir = str(project_root / "data" / "corpora" / "pacute_data")
     
     # Generate MCQ
     print(f"\nGenerating MCQ syllabification dataset ({num_samples} samples)...")
     mcq_dataset = create_syllabification_dataset(
         syllables, num_samples=num_samples, mode='mcq', 
-        random_seed=random_seed, freq_weight=0.75
+        random_seed=random_seed, freq_weight=0.75,
+        csv_dir=csv_dir,
     )
     mcq_path = Path(output_dir) / "syllabification_mcq.jsonl"
     mcq_dataset.to_json(mcq_path, lines=True, orient="records", force_ascii=False)
@@ -181,7 +184,8 @@ def generate_syllabification_benchmarks(output_dir: str, num_samples: int = 100,
     print(f"\nGenerating GEN syllabification dataset ({num_samples} samples)...")
     gen_dataset = create_syllabification_dataset(
         syllables, num_samples=num_samples, mode='gen', 
-        random_seed=random_seed, freq_weight=0.75
+        random_seed=random_seed, freq_weight=0.75,
+        csv_dir=csv_dir,
     )
     gen_path = Path(output_dir) / "syllabification_gen.jsonl"
     gen_dataset.to_json(gen_path, lines=True, orient="records", force_ascii=False)

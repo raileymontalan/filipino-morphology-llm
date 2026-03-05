@@ -69,8 +69,8 @@ def create_mcq_spelling(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted MCQ prompts and options
     """
-    text_en = 'Which option spells out "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang nagbabaybay sa "{normalized_word}"?'
+    text_en = 'Which option spells out the word "{normalized_word}"?'
+    text_tl = 'Alin sa sumusunod ang nagbabaybay sa salitang "{normalized_word}"?'
 
     mcq_correct = spell_string(row['normalized_word'])
     mcq_incorrect = perturb_string(row['normalized_word'])
@@ -98,8 +98,8 @@ def create_gen_spelling(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted generative prompts and label
     """
-    text_en = 'Spell out the word "{normalized_word}".'
-    text_tl = 'Baybayin ang salitang "{normalized_word}".'
+    text_en = 'Spell out the word "{normalized_word}" by placing spaces between each character.'
+    text_tl = 'Baybayin ang salitang "{normalized_word}" sa pamamagitan ng paglalagay ng espasyo sa pagitan ng bawat titik.'
 
     spelling = string_to_chars(row['normalized_word'])
     label = chars_to_string(spelling, add_space=True)
@@ -116,8 +116,8 @@ def create_gen_character(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted generative prompts and label
     """
-    text_en = 'How many "{character}"s are in "{normalized_word}"?'
-    text_tl = 'Ilang "{character}" ang mayroon sa "{normalized_word}".'
+    text_en = 'How many "{character}"s are in the word "{normalized_word}"?'
+    text_tl = 'Ilang "{character}" ang mayroon sa salitang "{normalized_word}"?'
 
     character_list = string_to_chars(row['normalized_word'])
     character_counts = {char: character_list.count(char) for char in set(character_list)}
@@ -138,8 +138,8 @@ def create_gen_length(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted generative prompts and label
     """
-    text_en = 'How many characters are in the "{normalized_word}"?'
-    text_tl = 'Ilan ang titik sa "{normalized_word}"?'
+    text_en = 'How many characters are in the word "{normalized_word}"?'
+    text_tl = 'Ilan ang titik sa salitang "{normalized_word}"?'
 
     label = len(row['normalized_word'])
     return prepare_gen_outputs(text_en, text_tl, str(label), row=row)
@@ -155,8 +155,8 @@ def create_gen_diacritic(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted generative prompts and label
     """
-    text_en = 'How many diacritics are in "{word}"?'
-    text_tl = 'Ilang titik ang mayroong tuldik sa "{word}".'
+    text_en = 'How many diacritics are in the word "{word}"?'
+    text_tl = 'Ilang titik ang mayroong tuldik sa salitang "{word}"?'
 
     character_list = string_to_chars(row['word'])
     diacritic_counts = {
@@ -179,8 +179,8 @@ def create_gen_uppercase(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted generative prompts and label
     """
-    text_en = 'How many uppercase characters are in "{normalized_word}"?'
-    text_tl = 'Ilang malaking titik ang mayroon sa "{normalized_word}".'
+    text_en = 'How many uppercase characters are in the word "{normalized_word}"?'
+    text_tl = 'Ilang malaking titik ang mayroon sa salitang "{normalized_word}"?'
 
     character_list = string_to_chars(row['normalized_word'])
     uppercase_counts = {
@@ -428,8 +428,8 @@ def create_mcq_char_exactly_one(rows: List[Dict[str, Any]], target: str, char: s
     
     kwargs = {"target_count": target_count, "char": char}
 
-    text_en = 'Which option contains exactly {target_count} "{char}"s?'
-    text_tl = 'Alin sa sumusunod ang naglalaman ng eksaktong {target_count} "{char}"?'
+    text_en = 'Which option contains exactly {target_count} "{char}" character/s?'
+    text_tl = 'Alin sa sumusunod ang naglalaman ng eksaktong {target_count} titik na "{char}"?'
 
     return prepare_mcq_outputs(text_en, text_tl, mcq_options, kwargs=kwargs)
 
@@ -457,8 +457,8 @@ def create_mcq_uppercase_exactly_one(rows: List[Dict[str, Any]], target: str, ch
     
     kwargs = {"target_count": target_count, "char": char}
 
-    text_en = 'Which option contains exactly {target_count} "{char}"s?'
-    text_tl = 'Alin sa sumusunod ang naglalaman ng eksaktong {target_count} "{char}"?'
+    text_en = 'Which option contains exactly {target_count} "{char}" character/s?'
+    text_tl = 'Alin sa sumusunod ang naglalaman ng eksaktong {target_count} titik na "{char}"?'
 
     return prepare_mcq_outputs(text_en, text_tl, mcq_options, kwargs=kwargs)
 
@@ -486,8 +486,8 @@ def create_mcq_char_exactly(rows: List[Dict[str, Any]], target: str, char: str) 
     
     kwargs = {"target_count": target_count, "char": char}
 
-    text_en = 'Which option contains exactly {target_count} "{char}"s?'
-    text_tl = 'Alin sa sumusunod ang naglalaman ng eksaktong {target_count} "{char}"?'
+    text_en = 'Which option contains exactly {target_count} "{char}" character/s?'
+    text_tl = 'Alin sa sumusunod ang naglalaman ng eksaktong {target_count} titik na "{char}"?'
 
     return prepare_mcq_outputs(text_en, text_tl, mcq_options, kwargs=kwargs)
 
@@ -515,8 +515,8 @@ def create_mcq_char_most(rows: List[Dict[str, Any]], target: str, char: str) -> 
     
     kwargs = {"char": char}
 
-    text_en = 'Which option contains the most number of "{char}"?'
-    text_tl = 'Alin sa sumusunod ang naglalaman ng pinakamaraming "{char}"?'
+    text_en = 'Which option contains the most number of "{char}" characters?'
+    text_tl = 'Alin sa sumusunod ang naglalaman ng pinakamaraming titik na "{char}"?'
 
     return prepare_mcq_outputs(text_en, text_tl, mcq_options, kwargs=kwargs)
 
@@ -544,8 +544,8 @@ def create_mcq_char_least(rows: List[Dict[str, Any]], target: str, char: str) ->
     
     kwargs = {"char": char}
 
-    text_en = 'Which option contains the least number of "{char}"?'
-    text_tl = 'Alin sa sumusunod ang naglalaman ng pinakakaunting "{char}"?'
+    text_en = 'Which option contains the least number of "{char}" characters?'
+    text_tl = 'Alin sa sumusunod ang naglalaman ng pinakakaunting titik na "{char}"?'
 
     return prepare_mcq_outputs(text_en, text_tl, mcq_options, kwargs=kwargs)
 
