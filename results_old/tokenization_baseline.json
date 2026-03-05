@@ -1,0 +1,482 @@
+{
+  "tokenizer": "gpt2",
+  "num_words": 100,
+  "morph_score": 0.23529411764705882,
+  "fragmentation": 1.5742574257425743,
+  "examples": [
+    {
+      "word": "tumakbo",
+      "morphemes": [
+        "t",
+        "um",
+        "akbo"
+      ],
+      "tokens": [
+        "t",
+        "um",
+        "ak",
+        "bo"
+      ],
+      "morph_boundaries": [
+        1,
+        3
+      ],
+      "token_boundaries": [
+        1,
+        3,
+        5
+      ],
+      "aligned": 2,
+      "total_morph": 2,
+      "score": 1.0
+    },
+    {
+      "word": "magluto",
+      "morphemes": [
+        "mag",
+        "luto"
+      ],
+      "tokens": [
+        "mag",
+        "l",
+        "uto"
+      ],
+      "morph_boundaries": [
+        3
+      ],
+      "token_boundaries": [
+        3,
+        4
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    },
+    {
+      "word": "matulog",
+      "morphemes": [
+        "ma",
+        "tulog"
+      ],
+      "tokens": [
+        "mat",
+        "ul",
+        "og"
+      ],
+      "morph_boundaries": [
+        2
+      ],
+      "token_boundaries": [
+        3,
+        5
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "nagluto",
+      "morphemes": [
+        "nag",
+        "luto"
+      ],
+      "tokens": [
+        "n",
+        "ag",
+        "l",
+        "uto"
+      ],
+      "morph_boundaries": [
+        3
+      ],
+      "token_boundaries": [
+        1,
+        3,
+        4
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    },
+    {
+      "word": "natulog",
+      "morphemes": [
+        "na",
+        "tulog"
+      ],
+      "tokens": [
+        "nat",
+        "ul",
+        "og"
+      ],
+      "morph_boundaries": [
+        2
+      ],
+      "token_boundaries": [
+        3,
+        5
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "tumatakbo",
+      "morphemes": [
+        "takbo",
+        "um- CV"
+      ],
+      "tokens": [
+        "t",
+        "umat",
+        "ak",
+        "bo"
+      ],
+      "morph_boundaries": [
+        5
+      ],
+      "token_boundaries": [
+        1,
+        5,
+        7
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    },
+    {
+      "word": "nagluluto",
+      "morphemes": [
+        "nag- CV",
+        "luto"
+      ],
+      "tokens": [
+        "n",
+        "ag",
+        "l",
+        "ul",
+        "uto"
+      ],
+      "morph_boundaries": [
+        7
+      ],
+      "token_boundaries": [
+        1,
+        3,
+        4,
+        6
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "natutulog",
+      "morphemes": [
+        "na- CV",
+        "tulog"
+      ],
+      "tokens": [
+        "nat",
+        "ut",
+        "ul",
+        "og"
+      ],
+      "morph_boundaries": [
+        6
+      ],
+      "token_boundaries": [
+        3,
+        5,
+        7
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "tatakbo",
+      "morphemes": [
+        "CV",
+        "takbo"
+      ],
+      "tokens": [
+        "t",
+        "at",
+        "ak",
+        "bo"
+      ],
+      "morph_boundaries": [
+        2
+      ],
+      "token_boundaries": [
+        1,
+        3,
+        5
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "magluluto",
+      "morphemes": [
+        "CV",
+        "luto"
+      ],
+      "tokens": [
+        "mag",
+        "l",
+        "ul",
+        "uto"
+      ],
+      "morph_boundaries": [
+        2
+      ],
+      "token_boundaries": [
+        3,
+        4,
+        6
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "matutulog",
+      "morphemes": [
+        "CV",
+        "tulog"
+      ],
+      "tokens": [
+        "mat",
+        "ut",
+        "ul",
+        "og"
+      ],
+      "morph_boundaries": [
+        2
+      ],
+      "token_boundaries": [
+        3,
+        5,
+        7
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "kainin",
+      "morphemes": [
+        "kain",
+        "in"
+      ],
+      "tokens": [
+        "k",
+        "ain",
+        "in"
+      ],
+      "morph_boundaries": [
+        4
+      ],
+      "token_boundaries": [
+        1,
+        4
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    },
+    {
+      "word": "ibigay",
+      "morphemes": [
+        "i",
+        "bigay"
+      ],
+      "tokens": [
+        "ib",
+        "ig",
+        "ay"
+      ],
+      "morph_boundaries": [
+        1
+      ],
+      "token_boundaries": [
+        2,
+        4
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "hugasan",
+      "morphemes": [
+        "hugas",
+        "an"
+      ],
+      "tokens": [
+        "h",
+        "ug",
+        "as",
+        "an"
+      ],
+      "morph_boundaries": [
+        5
+      ],
+      "token_boundaries": [
+        1,
+        3,
+        5
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    },
+    {
+      "word": "kinain",
+      "morphemes": [
+        "k",
+        "in",
+        "ain"
+      ],
+      "tokens": [
+        "kin",
+        "ain"
+      ],
+      "morph_boundaries": [
+        1,
+        3
+      ],
+      "token_boundaries": [
+        3
+      ],
+      "aligned": 1,
+      "total_morph": 2,
+      "score": 0.5
+    },
+    {
+      "word": "ibinigay",
+      "morphemes": [
+        "i- -in",
+        "bigay"
+      ],
+      "tokens": [
+        "ib",
+        "in",
+        "ig",
+        "ay"
+      ],
+      "morph_boundaries": [
+        6
+      ],
+      "token_boundaries": [
+        2,
+        4,
+        6
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    },
+    {
+      "word": "hinugasan",
+      "morphemes": [
+        "hugas",
+        "in -an"
+      ],
+      "tokens": [
+        "hin",
+        "ug",
+        "as",
+        "an"
+      ],
+      "morph_boundaries": [
+        5
+      ],
+      "token_boundaries": [
+        3,
+        5,
+        7
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    },
+    {
+      "word": "kinakain",
+      "morphemes": [
+        "kain",
+        "in CV"
+      ],
+      "tokens": [
+        "kin",
+        "ak",
+        "ain"
+      ],
+      "morph_boundaries": [
+        4
+      ],
+      "token_boundaries": [
+        3,
+        5
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "ibinibigay",
+      "morphemes": [
+        "i- -in- CV",
+        "bigay"
+      ],
+      "tokens": [
+        "ib",
+        "in",
+        "ib",
+        "ig",
+        "ay"
+      ],
+      "morph_boundaries": [
+        10
+      ],
+      "token_boundaries": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "aligned": 0,
+      "total_morph": 1,
+      "score": 0.0
+    },
+    {
+      "word": "hinuhugasan",
+      "morphemes": [
+        "hugas",
+        "In- CV -An"
+      ],
+      "tokens": [
+        "hin",
+        "uh",
+        "ug",
+        "as",
+        "an"
+      ],
+      "morph_boundaries": [
+        5
+      ],
+      "token_boundaries": [
+        3,
+        5,
+        7,
+        9
+      ],
+      "aligned": 1,
+      "total_morph": 1,
+      "score": 1.0
+    }
+  ]
+}
