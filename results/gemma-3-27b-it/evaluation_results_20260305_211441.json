@@ -1,0 +1,286 @@
+{
+  "hf_model_name": "google/gemma-3-27b-it",
+  "model_type": "it",
+  "benchmarks": {
+    "pacute-composition-mcq": {
+      "accuracy": 0.36666667461395264,
+      "f1_score": 0.5365853658143089,
+      "precision": 0.999999999999697,
+      "recall": 0.3666666666666259,
+      "path_confidence": 0.36707720160484314,
+      "normalized_accuracy": 0.15555556615193686,
+      "num_options": 4,
+      "num_samples": 900,
+      "format": "mcq",
+      "by_category": {
+        "char_exactly": {
+          "num_samples": 100,
+          "accuracy": 0.22,
+          "f1_score": 0.3607,
+          "precision": 1.0,
+          "recall": 0.22,
+          "path_confidence": 0.2265,
+          "normalized_accuracy": -0.04
+        },
+        "char_least": {
+          "num_samples": 100,
+          "accuracy": 0.29,
+          "f1_score": 0.4496,
+          "precision": 1.0,
+          "recall": 0.29,
+          "path_confidence": 0.2842,
+          "normalized_accuracy": 0.0533
+        },
+        "char_most": {
+          "num_samples": 100,
+          "accuracy": 0.16,
+          "f1_score": 0.2759,
+          "precision": 1.0,
+          "recall": 0.16,
+          "path_confidence": 0.1395,
+          "normalized_accuracy": -0.12
+        },
+        "diacritic_exactly": {
+          "num_samples": 100,
+          "accuracy": 0.55,
+          "f1_score": 0.7097,
+          "precision": 1.0,
+          "recall": 0.55,
+          "path_confidence": 0.5195,
+          "normalized_accuracy": 0.4
+        },
+        "length_exactly": {
+          "num_samples": 100,
+          "accuracy": 0.23,
+          "f1_score": 0.374,
+          "precision": 1.0,
+          "recall": 0.23,
+          "path_confidence": 0.2383,
+          "normalized_accuracy": -0.0267
+        },
+        "length_least": {
+          "num_samples": 100,
+          "accuracy": 0.67,
+          "f1_score": 0.8024,
+          "precision": 1.0,
+          "recall": 0.67,
+          "path_confidence": 0.6648,
+          "normalized_accuracy": 0.56
+        },
+        "length_most": {
+          "num_samples": 100,
+          "accuracy": 0.09,
+          "f1_score": 0.1651,
+          "precision": 1.0,
+          "recall": 0.09,
+          "path_confidence": 0.0785,
+          "normalized_accuracy": -0.2133
+        },
+        "spelling": {
+          "num_samples": 100,
+          "accuracy": 0.77,
+          "f1_score": 0.8701,
+          "precision": 1.0,
+          "recall": 0.77,
+          "path_confidence": 0.8706,
+          "normalized_accuracy": 0.6933
+        },
+        "uppercase_exactly": {
+          "num_samples": 100,
+          "accuracy": 0.32,
+          "f1_score": 0.4848,
+          "precision": 1.0,
+          "recall": 0.32,
+          "path_confidence": 0.2818,
+          "normalized_accuracy": 0.0933
+        }
+      },
+      "timestamp": "20260305_211441"
+    },
+    "pacute-manipulation-mcq": {
+      "accuracy": 0.5162500143051147,
+      "f1_score": 0.6809563066326358,
+      "precision": 0.9999999999997579,
+      "recall": 0.5162499999999355,
+      "path_confidence": 0.5003055334091187,
+      "normalized_accuracy": 0.35500001907348633,
+      "num_options": 4,
+      "num_samples": 800,
+      "format": "mcq",
+      "by_category": {
+        "deletion": {
+          "num_samples": 100,
+          "accuracy": 0.36,
+          "f1_score": 0.5294,
+          "precision": 1.0,
+          "recall": 0.36,
+          "path_confidence": 0.3495,
+          "normalized_accuracy": 0.1467
+        },
+        "diacritic_normalization": {
+          "num_samples": 100,
+          "accuracy": 0.53,
+          "f1_score": 0.6928,
+          "precision": 1.0,
+          "recall": 0.53,
+          "path_confidence": 0.4944,
+          "normalized_accuracy": 0.3733
+        },
+        "duplication": {
+          "num_samples": 100,
+          "accuracy": 0.38,
+          "f1_score": 0.5507,
+          "precision": 1.0,
+          "recall": 0.38,
+          "path_confidence": 0.3771,
+          "normalized_accuracy": 0.1733
+        },
+        "insertion": {
+          "num_samples": 100,
+          "accuracy": 0.52,
+          "f1_score": 0.6842,
+          "precision": 1.0,
+          "recall": 0.52,
+          "path_confidence": 0.5042,
+          "normalized_accuracy": 0.36
+        },
+        "lowercasing": {
+          "num_samples": 100,
+          "accuracy": 0.53,
+          "f1_score": 0.6928,
+          "precision": 1.0,
+          "recall": 0.53,
+          "path_confidence": 0.48,
+          "normalized_accuracy": 0.3733
+        },
+        "permutation": {
+          "num_samples": 100,
+          "accuracy": 0.23,
+          "f1_score": 0.374,
+          "precision": 1.0,
+          "recall": 0.23,
+          "path_confidence": 0.2364,
+          "normalized_accuracy": -0.0267
+        },
+        "substitution": {
+          "num_samples": 100,
+          "accuracy": 0.62,
+          "f1_score": 0.7654,
+          "precision": 1.0,
+          "recall": 0.62,
+          "path_confidence": 0.6235,
+          "normalized_accuracy": 0.4933
+        },
+        "uppercasing": {
+          "num_samples": 100,
+          "accuracy": 0.96,
+          "f1_score": 0.9796,
+          "precision": 1.0,
+          "recall": 0.96,
+          "path_confidence": 0.9373,
+          "normalized_accuracy": 0.9467
+        }
+      },
+      "timestamp": "20260305_211441"
+    },
+    "pacute-composition-gen": {
+      "num_samples": 500,
+      "exact_match": 0.89,
+      "contains_match": 0.89,
+      "prefix_match": 0.89,
+      "format": "generative",
+      "by_category": {
+        "character": {
+          "num_samples": 100,
+          "exact_match": 0.62,
+          "contains_match": 0.62,
+          "prefix_match": 0.62
+        },
+        "diacritic": {
+          "num_samples": 100,
+          "exact_match": 0.96,
+          "contains_match": 0.96,
+          "prefix_match": 0.96
+        },
+        "length": {
+          "num_samples": 100,
+          "exact_match": 0.99,
+          "contains_match": 0.99,
+          "prefix_match": 0.99
+        },
+        "spelling": {
+          "num_samples": 100,
+          "exact_match": 1.0,
+          "contains_match": 1.0,
+          "prefix_match": 1.0
+        },
+        "uppercase": {
+          "num_samples": 100,
+          "exact_match": 0.88,
+          "contains_match": 0.88,
+          "prefix_match": 0.88
+        }
+      },
+      "timestamp": "20260305_211441"
+    },
+    "pacute-manipulation-gen": {
+      "num_samples": 800,
+      "exact_match": 0.5925,
+      "contains_match": 0.6,
+      "prefix_match": 0.6,
+      "format": "generative",
+      "by_category": {
+        "deletion": {
+          "num_samples": 100,
+          "exact_match": 0.76,
+          "contains_match": 0.81,
+          "prefix_match": 0.81
+        },
+        "diacritic_normalization": {
+          "num_samples": 100,
+          "exact_match": 0.97,
+          "contains_match": 0.97,
+          "prefix_match": 0.97
+        },
+        "duplication": {
+          "num_samples": 100,
+          "exact_match": 0.26,
+          "contains_match": 0.27,
+          "prefix_match": 0.27
+        },
+        "insertion": {
+          "num_samples": 100,
+          "exact_match": 0.02,
+          "contains_match": 0.02,
+          "prefix_match": 0.02
+        },
+        "lowercasing": {
+          "num_samples": 100,
+          "exact_match": 0.99,
+          "contains_match": 0.99,
+          "prefix_match": 0.99
+        },
+        "permutation": {
+          "num_samples": 100,
+          "exact_match": 0.09,
+          "contains_match": 0.09,
+          "prefix_match": 0.09
+        },
+        "substitution": {
+          "num_samples": 100,
+          "exact_match": 0.66,
+          "contains_match": 0.66,
+          "prefix_match": 0.66
+        },
+        "uppercasing": {
+          "num_samples": 100,
+          "exact_match": 0.99,
+          "contains_match": 0.99,
+          "prefix_match": 0.99
+        }
+      },
+      "timestamp": "20260305_211441"
+    }
+  },
+  "timestamp": "20260305_211441"
+}

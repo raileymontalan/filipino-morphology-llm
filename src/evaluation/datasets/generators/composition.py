@@ -69,8 +69,8 @@ def create_mcq_spelling(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Dictionary containing formatted MCQ prompts and options
     """
-    text_en = 'Which option spells out the word "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang nagbabaybay sa salitang "{normalized_word}"?'
+    text_en = 'Which option spells out the word "{normalized_word}" by placing spaces between each character?'
+    text_tl = 'Alin sa sumusunod ang nagbabaybay sa salitang "{normalized_word}" sa pamamagitan ng paglagay ng espasyo sa pagitan ng bawat titik?'
 
     mcq_correct = spell_string(row['normalized_word'])
     mcq_incorrect = perturb_string(row['normalized_word'])
@@ -99,7 +99,7 @@ def create_gen_spelling(row: pd.Series) -> Dict[str, Any]:
         Dictionary containing formatted generative prompts and label
     """
     text_en = 'Spell out the word "{normalized_word}" by placing spaces between each character.'
-    text_tl = 'Baybayin ang salitang "{normalized_word}" sa pamamagitan ng paglalagay ng espasyo sa pagitan ng bawat titik.'
+    text_tl = 'Baybayin ang salitang "{normalized_word}" sa pamamagitan ng paglagay ng espasyo sa pagitan ng bawat titik.'
 
     spelling = string_to_chars(row['normalized_word'])
     label = chars_to_string(spelling, add_space=True)

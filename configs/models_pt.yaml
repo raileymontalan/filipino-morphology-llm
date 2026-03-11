@@ -25,25 +25,25 @@ models:
   # ============================================================================
   # Cerebras GPT Family (all use GPT-2 tokenizer)
   # ============================================================================
-  cerebras-gpt-111m:
-    path: cerebras/Cerebras-GPT-111M
-    type: pt
+  # cerebras-gpt-111m:
+  #   path: cerebras/Cerebras-GPT-111M
+  #   type: pt
   
-  cerebras-gpt-256m:
-    path: cerebras/Cerebras-GPT-256M
-    type: pt
+  # cerebras-gpt-256m:
+  #   path: cerebras/Cerebras-GPT-256M
+  #   type: pt
   
-  cerebras-gpt-590m:
-    path: cerebras/Cerebras-GPT-590M
-    type: pt
+  # cerebras-gpt-590m:
+  #   path: cerebras/Cerebras-GPT-590M
+  #   type: pt
   
-  cerebras-gpt-1.3b:
-    path: cerebras/Cerebras-GPT-1.3B
-    type: pt
+  # cerebras-gpt-1.3b:
+  #   path: cerebras/Cerebras-GPT-1.3B
+  #   type: pt
   
-  cerebras-gpt-2.7b:
-    path: cerebras/Cerebras-GPT-2.7B
-    type: pt
+  # cerebras-gpt-2.7b:
+  #   path: cerebras/Cerebras-GPT-2.7B
+  #   type: pt
 
   # ============================================================================
   # Gemma 3 Family

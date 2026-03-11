@@ -285,7 +285,7 @@ def create_mcq_permutation(row):
 
 def create_mcq_duplication(row):
     text_en = 'Which option correctly duplicates every character "{char_to_duplicate}" once in the word "{normalized_word}"?'
-    text_tl = 'Alin sa sumusunod ang inuulit ang bawat titik na "{char_to_duplicate}" nang isang beses sa salitang "{normalized_word}"?'
+    text_tl = 'Alin sa sumusunod ang umuulit sa bawat titik na "{char_to_duplicate}" nang isang beses sa salitang "{normalized_word}"?'
 
     string = row['normalized_word']
     char_to_duplicate = get_random_char(string)
@@ -413,8 +413,8 @@ def create_gen_substitution(row):
 
 
 def create_gen_permutation(row):
-    text_en = 'Swap every character "{char1}" with the character "{char2}" in the word "{normalized_word}".'
-    text_tl = 'Palitan ang bawat titik na "{char1}" gamit ng titik na "{char2}" at ang kabaligtarang din nito sa salitang "{normalized_word}".'
+    text_en = 'Swap every character "{char1}" and character "{char2}" in the word "{normalized_word}".'
+    text_tl = 'Pagpalitin ang bawat titik na "{char1}" at titik na "{char2}" sa salitang "{normalized_word}".'
 
     string = row['normalized_word']
     char1 = get_random_char(string)

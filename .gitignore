@@ -118,7 +118,7 @@ nemo_experiments/
 
 # Results - ignore all subfolders and files but keep the results/ directory itself
 results_old/*/
-results/*/
+# results/*/
 # results/*.json
 
 # Job scripts with sensitive cluster/path information
